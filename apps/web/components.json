@@ -1,0 +1,5 @@
+{
+  "componentsPath": "src/app/ui",
+  "style": "vega",
+  "importAlias": "@mousedent/ui"
+}
