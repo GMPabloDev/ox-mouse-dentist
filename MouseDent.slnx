@@ -1,0 +1,14 @@
+<Solution>
+  <Folder Name="/apps/" />
+  <Folder Name="/apps/api/" />
+  <Folder Name="/apps/api/src/">
+    <Project Path="apps/api/src/MouseDent.Api/MouseDent.Api.csproj" />
+    <Project Path="apps/api/src/MouseDent.Application/MouseDent.Application.csproj" />
+    <Project Path="apps/api/src/MouseDent.Domain/MouseDent.Domain.csproj" />
+    <Project Path="apps/api/src/MouseDent.Infrastructure/MouseDent.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/apps/api/tests/">
+    <Project Path="apps/api/tests/MouseDent.Api.Tests/MouseDent.Api.Tests.csproj" />
+    <Project Path="apps/api/tests/MouseDent.Application.Tests/MouseDent.Application.Tests.csproj" />
+  </Folder>
+</Solution>

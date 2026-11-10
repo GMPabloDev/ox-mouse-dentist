@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.angular/
+bin/
+obj/
+apps/api/openapi/
+package-lock.json
+backlogs/

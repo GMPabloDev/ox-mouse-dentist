@@ -1,0 +1,36 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+*.db
+*.db-shm
+*.db-wal
+artifacts/
+TestResults/
+*.trx
+coverage/
+
+# Node
+node_modules/
+dist/
+.angular/
+.nx/
+*.tsbuildinfo
+npm-debug.log*
+.npm/
+
+# Entorno local
+.env
+.env.*
+!.env.example
+appsettings.Local.json
+
+# Herramientas
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/launch.json

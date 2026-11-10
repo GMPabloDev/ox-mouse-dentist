@@ -1,0 +1,35 @@
+{
+  "name": "mousedent",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Monorepo de MouseDent: API .NET y panel/web Angular.",
+  "workspaces": [
+    "apps/web",
+    "packages/*"
+  ],
+  "engines": {
+    "node": "^22.22.3 || ^24.15.0 || >=26.0.0"
+  },
+  "scripts": {
+    "dev": "concurrently --names api,web --prefix-colors blue,magenta \"npm:dev:api\" \"npm:dev:web\"",
+    "dev:api": "dotnet watch --project apps/api/src/MouseDent.Api/MouseDent.Api.csproj run --launch-profile http",
+    "dev:web": "npm run start -w @mousedent/web",
+    "build": "npm run api:openapi && npm run build -w @mousedent/api-client && npm run build -w @mousedent/web",
+    "build:api": "dotnet build MouseDent.slnx",
+    "build:web": "npm run build -w @mousedent/web",
+    "test": "npm run test:api && npm run test:web",
+    "test:api": "dotnet test --solution MouseDent.slnx",
+    "test:web": "npm run test -w @mousedent/web",
+    "format": "dotnet format MouseDent.slnx && prettier --write .",
+    "format:check": "dotnet format MouseDent.slnx --verify-no-changes && prettier --check .",
+    "api:openapi": "ASPNETCORE_ENVIRONMENT=OpenApiBuild dotnet build apps/api/src/MouseDent.Api/MouseDent.Api.csproj /p:OpenApiGenerateDocuments=true",
+    "api:client": "npm run api:openapi && npm run build -w @mousedent/api-client",
+    "db:update": "dotnet ef database update --project apps/api/src/MouseDent.Infrastructure --startup-project apps/api/src/MouseDent.Infrastructure",
+    "db:migration": "dotnet ef migrations add --project apps/api/src/MouseDent.Infrastructure --startup-project apps/api/src/MouseDent.Infrastructure --output-dir Persistence/Migrations"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.7",
+    "prettier": "^3.9.10"
+  },
+  "packageManager": "npm@11.19.0"
+}
