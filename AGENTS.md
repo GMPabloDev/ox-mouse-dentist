@@ -123,8 +123,8 @@ SSR no cambia las carpetas. Una vista pública sigue en `features/`; lo que camb
 
 1. Cambia el endpoint.
 2. Ejecuta `npm run api:client`.
-3. Incluye `apps/api/openapi/MouseDent.Api.json`, `packages/api-client/src/generated` y
-   `packages/api-client/dist` en el mismo cambio.
+3. Incluye `apps/api/openapi/MouseDent.Api.json` y `packages/api-client/src/generated` en el mismo
+   cambio. `packages/api-client/dist` es salida de build y está en `.gitignore`.
 
 El cuerpo de error es `ProblemDetails`. La web lo consume desde el cliente generado.
 
