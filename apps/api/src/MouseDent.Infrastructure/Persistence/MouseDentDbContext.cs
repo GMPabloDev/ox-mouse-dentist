@@ -1,0 +1,21 @@
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
+using MouseDent.Infrastructure.Auth;
+
+namespace MouseDent.Infrastructure.Persistence;
+
+/// <summary>
+/// Contexto único del MVP. Identity y el modelo de dominio comparten base SQLite.
+/// El modelo de dominio se agrega aquí en las specs de H-01 en adelante.
+/// </summary>
+public sealed class MouseDentDbContext(DbContextOptions<MouseDentDbContext> options)
+    : IdentityDbContext<StaffUser, IdentityRole<Guid>, Guid>(options)
+{
+    protected override void OnModelCreating(ModelBuilder builder)
+    {
+        base.OnModelCreating(builder);
+
+        builder.ApplyConfigurationsFromAssembly(typeof(MouseDentDbContext).Assembly);
+    }
+}
