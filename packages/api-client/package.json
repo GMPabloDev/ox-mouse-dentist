@@ -1,0 +1,27 @@
+{
+  "name": "@mousedent/api-client",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Cliente TypeScript generado desde el documento OpenAPI de MouseDent.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "generate": "openapi-ts",
+    "build": "npm run generate && tsc -p tsconfig.json",
+    "watch": "tsc -p tsconfig.json --watch"
+  },
+  "devDependencies": {
+    "@hey-api/openapi-ts": "0.99.0",
+    "typescript": "~6.0.2"
+  }
+}
