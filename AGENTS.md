@@ -157,6 +157,16 @@ Los comandos `db:*` necesitan que ejecutes `dotnet tool restore` al menos una ve
 Identity y, más adelante, el modelo de dominio. Cambiar de base implica cambiar `UseSqlite` y el
 paquete del proveedor.
 
+**Fechas y agenda.** El instante de una cita se guarda como `DateTime` en UTC, no como
+`DateTimeOffset`. El proveedor de SQLite solo traduce igualdad para `DateTimeOffset`, `TimeSpan` y
+`ulong`; la comparación y el orden se evalúan en cliente, y la agenda necesita filtrar por rango y
+ordenar por inicio. El día se pide con `DateOnly` (`?date=2026-11-10`) y el rango lo calcula la API
+en la zona del local, así un equipo con la zona mal configurada no mueve la agenda. Las ventanas de
+disponibilidad usan `DayOfWeek` y `TimeOnly`, y los solapes se resuelven en Domain sobre las
+ventanas del día, porque `TimeOnly` tampoco tiene traducciones de comparación en SQLite. `Ahora`
+sale de `TimeProvider`, ya registrado en Infrastructure, nunca de `DateTime.UtcNow`. No se agrega
+NodaTime: solo hace falta con reglas recurrentes, aritmética de calendario o varios países.
+
 **Identity y JWT bearer.** Application define los puertos `IStaffAccounts` e `ITokenIssuer`.
 Infrastructure los implementa con Identity y JWT. El alcance por local llega con H-06.
 
@@ -181,6 +191,12 @@ usa `RenderMode.Client`.
 **Tailwind 4 y Spartan.** El tema vive en `apps/web/src/styles.css`. La configuración de Spartan
 vive en `apps/web/components.json`. El tema actual es el de Spartan por defecto; la spec de UI
 decide el diseño final.
+
+**Fechas en la web.** `date-fns` es la librería de fechas del proyecto y la conversión y el formato
+viven en un solo archivo de `core/`, para que las features no importen la librería directamente. El
+formato visible es `es-PE` con `timeZone: 'America/Lima'`. La web nunca parsea una fecha sin offset:
+`new Date('2026-11-10')` se interpreta como medianoche UTC y corre el día en los bordes de mes.
+Temporal no se usa mientras Safari e iOS no lo envíen de forma estable.
 
 ## Pendiente
 

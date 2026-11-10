@@ -1,0 +1,206 @@
+/*
+ * MouseDent — Abrazo · Brand & UI theme v1
+ * Tailwind CSS v4 + spartan (CSS variables enabled)
+ * Integrate AFTER the existing Tailwind/spartan @imports in globals.css.
+ * Do not duplicate @theme mappings or :root/.dark blocks already in your
+ * project; merge or replace those definitions instead.
+ * Load "Nunito Sans" and "Nunito" via your framework/font provider.
+ */
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  /* Brand identity */
+  --brand-teal: #137F79;
+  --brand-mint: #99DAD0;
+  --brand-coral: #EF756A;
+  --brand-peach: #FFE0CA;
+  --brand-ivory: #FFFAF5;
+  --brand-ink: #2B3837;
+
+  /* shadcn/ui semantic tokens */
+  --radius: 0.875rem;
+  --background: #FFFAF5;
+  --foreground: #2B3837;
+  --card: #FFFFFF;
+  --card-foreground: #2B3837;
+  --popover: #FFFFFF;
+  --popover-foreground: #2B3837;
+  --primary: #137F79;
+  --primary-foreground: #FFFFFF;
+  --secondary: #E4F4EF;
+  --secondary-foreground: #215651;
+  --muted: #F4EFEA;
+  --muted-foreground: #5C6965;
+  --accent: #FFE0CA;
+  --accent-foreground: #543A30;
+  --destructive: #B83B43;
+  --destructive-foreground: #FFFFFF;
+  --border: #E4E6DF;
+  --input: #81938B;
+  --ring: #137F79;
+
+  /* Visualizations: distinguish categories with labels, not color alone */
+  --chart-1: #137F79;
+  --chart-2: #BD5652;
+  --chart-3: #996923;
+  --chart-4: #6265A8;
+  --chart-5: #36775C;
+
+  /* Admin sidebar */
+  --sidebar: #FAF6F0;
+  --sidebar-foreground: #2B3837;
+  --sidebar-primary: #137F79;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #E4F4EF;
+  --sidebar-accent-foreground: #215651;
+  --sidebar-border: #E3E6DF;
+  --sidebar-ring: #137F79;
+
+  /* Custom semantic states */
+  --success: #18765D;
+  --success-foreground: #FFFFFF;
+  --warning: #F8E3AE;
+  --warning-foreground: #704B12;
+  --info: #D8ECEC;
+  --info-foreground: #245253;
+
+  /* Extended brand surfaces: use for illustrations, banners, empty states */
+  --brand-coral-soft: #FFE9DF;
+  --brand-mint-soft: #E4F4EF;
+  --brand-peach-soft: #FFF0E5;
+
+  --font-ui: "Nunito Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-heading: "Nunito", "Nunito Sans", ui-sans-serif, system-ui, sans-serif;
+}
+
+.dark {
+  --brand-teal: #86DFD2;
+  --brand-mint: #75CDBD;
+  --brand-coral: #FF9A8A;
+  --brand-peach: #FFD6C2;
+  --brand-ivory: #FFFAF5;
+  --brand-ink: #EAF5F0;
+
+  --background: #142222;
+  --foreground: #EAF5F0;
+  --card: #1C2D2B;
+  --card-foreground: #EAF5F0;
+  --popover: #213431;
+  --popover-foreground: #EAF5F0;
+  --primary: #86DFD2;
+  --primary-foreground: #123C39;
+  --secondary: #294440;
+  --secondary-foreground: #EAF5F0;
+  --muted: #263936;
+  --muted-foreground: #B6CFC7;
+  --accent: #46352F;
+  --accent-foreground: #FFE3D3;
+  --destructive: #F18E87;
+  --destructive-foreground: #3C1B1B;
+  --border: #39514B;
+  --input: #65877F;
+  --ring: #86DFD2;
+
+  --chart-1: #86DFD2;
+  --chart-2: #FFA99A;
+  --chart-3: #E9C68E;
+  --chart-4: #B3B6F3;
+  --chart-5: #9DDFB0;
+
+  --sidebar: #182B29;
+  --sidebar-foreground: #EAF5F0;
+  --sidebar-primary: #86DFD2;
+  --sidebar-primary-foreground: #123C39;
+  --sidebar-accent: #2D4742;
+  --sidebar-accent-foreground: #EAF5F0;
+  --sidebar-border: #38504A;
+  --sidebar-ring: #86DFD2;
+
+  --success: #7BD6AC;
+  --success-foreground: #193D2F;
+  --warning: #65492B;
+  --warning-foreground: #FFF1D3;
+  --info: #2B5356;
+  --info-foreground: #E1F5F3;
+
+  --brand-coral-soft: #4B3330;
+  --brand-mint-soft: #294440;
+  --brand-peach-soft: #46352F;
+}
+
+@theme inline {
+  /* Font utilities */
+  --font-sans: var(--font-ui);
+  --font-display: var(--font-heading);
+
+  /* shadcn/ui mapping */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  /* Sidebar mapping */
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Additional semantic utilities */
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+
+  /* Brand utilities: bg-brand-coral, text-brand-teal, etc. */
+  --color-brand-teal: var(--brand-teal);
+  --color-brand-mint: var(--brand-mint);
+  --color-brand-coral: var(--brand-coral);
+  --color-brand-peach: var(--brand-peach);
+  --color-brand-ivory: var(--brand-ivory);
+  --color-brand-ink: var(--brand-ink);
+  --color-brand-coral-soft: var(--brand-coral-soft);
+  --color-brand-mint-soft: var(--brand-mint-soft);
+  --color-brand-peach-soft: var(--brand-peach-soft);
+
+  /* Organic radius scale */
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+@layer base {
+  * { @apply border-border outline-ring/50; }
+  body { @apply bg-background text-foreground font-sans; }
+  /* Override the user-agent focus style only if a visible ring remains. */
+}
