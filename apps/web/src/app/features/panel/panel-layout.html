@@ -1,0 +1,159 @@
+<div class="min-h-dvh bg-background md:flex">
+  @if (mobileOpen()) {
+    <button
+      class="fixed inset-0 z-40 bg-brand-ink/40 md:hidden"
+      type="button"
+      aria-label="Cerrar menú"
+      (click)="closeSidebar()"
+    ></button>
+  }
+
+  <aside
+    class="fixed inset-y-0 left-0 z-50 flex w-64 flex-col overflow-y-auto border-r border-sidebar-border bg-sidebar px-4 py-6 transition-transform duration-200 ease-out motion-reduce:transition-none md:sticky md:top-0 md:h-dvh md:w-[244px] md:translate-x-0 md:transition-none"
+    [class]="mobileOpen() ? 'translate-x-0' : '-translate-x-full'"
+    aria-label="Panel de administración"
+  >
+    <div class="flex items-center gap-2.5 px-2 pb-6">
+      <app-brand-mark class="h-9" />
+      <span class="font-display text-xl font-extrabold tracking-tight">
+        <span class="text-brand-ink">Mouse</span><span class="text-primary">Dent</span>
+      </span>
+      <button
+        class="ml-auto rounded-md p-1.5 text-xl leading-none text-muted-foreground hover:bg-sidebar-accent md:hidden"
+        type="button"
+        aria-label="Cerrar menú"
+        (click)="closeSidebar()"
+      >
+        ×
+      </button>
+    </div>
+
+    <div
+      class="mb-7 flex items-center gap-3 rounded-xl border border-sidebar-border bg-card px-3 py-3"
+    >
+      <span class="grid size-8 shrink-0 place-items-center rounded-lg bg-secondary text-primary">
+        <svg
+          class="size-4"
+          aria-hidden="true"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M4 21V5l8-3 8 3v16 M2 21h20 M9 21v-5h6v5 M8 7h1 M15 7h1 M8 11h1 M15 11h1" />
+        </svg>
+      </span>
+      <div class="min-w-0">
+        <p class="truncate text-sm font-bold">MouseDent</p>
+        <p class="truncate text-xs text-muted-foreground">Panel de administración</p>
+      </div>
+    </div>
+
+    <p
+      class="px-3 pb-2.5 text-[11px] font-extrabold tracking-[0.14em] text-muted-foreground uppercase"
+    >
+      Administración
+    </p>
+
+    <nav aria-label="Navegación principal">
+      <a
+        class="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold text-sidebar-foreground transition-colors hover:bg-sidebar-accent/70 focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:outline-none"
+        routerLink="/locales"
+        routerLinkActive="bg-sidebar-accent text-sidebar-accent-foreground"
+      >
+        <svg
+          class="size-5 shrink-0"
+          aria-hidden="true"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M4 21V5l8-3 8 3v16 M2 21h20 M9 21v-5h6v5 M8 7h1 M15 7h1 M8 11h1 M15 11h1" />
+        </svg>
+        <span>Locales</span>
+      </a>
+    </nav>
+
+    <div class="flex-1"></div>
+
+    <div class="mt-6 border-t border-sidebar-border pt-4">
+      <div class="flex items-center gap-2.5">
+        <hlm-avatar class="bg-accent text-accent-foreground" aria-hidden="true">
+          <span hlmAvatarFallback class="text-[11px] font-extrabold">{{ initials() }}</span>
+        </hlm-avatar>
+        <div class="min-w-0">
+          <p class="line-clamp-2 text-sm font-bold">{{ account()?.displayName }}</p>
+          <p class="truncate text-xs text-muted-foreground">{{ roleLabel() }}</p>
+        </div>
+        <button
+          class="ml-auto rounded-md p-2 text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-primary focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:outline-none"
+          type="button"
+          title="Cerrar sesión"
+          aria-label="Cerrar sesión"
+          (click)="signOut()"
+        >
+          <svg
+            class="size-5"
+            aria-hidden="true"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M9 4H3v16h6 M10 12h11 M16 7l5 5-5 5" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <div class="flex min-w-0 flex-1 flex-col">
+    <header
+      class="sticky top-0 z-30 flex items-center gap-3 border-b border-border bg-background/85 px-4 py-3 backdrop-blur md:px-14 xl:px-[72px]"
+    >
+      <button
+        class="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none md:hidden"
+        type="button"
+        aria-label="Abrir menú"
+        [attr.aria-expanded]="mobileOpen()"
+        (click)="openSidebar()"
+      >
+        <svg
+          class="size-5"
+          aria-hidden="true"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M3 3h18v18H3z M9 3v18 M5 7h2 M5 11h2" />
+        </svg>
+      </button>
+
+      <p class="flex items-center gap-2 text-sm text-muted-foreground">
+        <span>Administración</span>
+        <span aria-hidden="true">/</span>
+        <b class="font-semibold text-foreground">Locales</b>
+      </p>
+
+      @if (account(); as user) {
+        <span class="ml-auto hidden truncate text-xs text-muted-foreground sm:inline">
+          {{ user.email }}
+        </span>
+      }
+    </header>
+
+    <main class="flex-1 px-4 py-8 md:px-14 xl:px-[72px]">
+      <router-outlet />
+    </main>
+  </div>
+</div>
