@@ -92,6 +92,383 @@
           }
         ]
       }
+    },
+    "/api/locales": {
+      "get": {
+        "tags": [
+          "Locales"
+        ],
+        "summary": "Lista los locales activos e inactivos con su horario y el estado de la foto.",
+        "operationId": "ListLocales",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LocalResponse"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Bearer": [ ]
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Locales"
+        ],
+        "summary": "Registra un local con su horario semanal y una foto opcional.",
+        "operationId": "CreateLocal",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateLocalForm"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LocalResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Bearer": [ ]
+          }
+        ]
+      }
+    },
+    "/api/locales/{id}/photo": {
+      "get": {
+        "tags": [
+          "Locales"
+        ],
+        "summary": "Devuelve la foto de un local.",
+        "operationId": "GetLocalPhoto",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "image/jpeg": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/webp": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Bearer": [ ]
+          }
+        ]
+      }
+    },
+    "/api/locales/{id}": {
+      "put": {
+        "tags": [
+          "Locales"
+        ],
+        "summary": "Edita los datos, el horario y la foto de un local.",
+        "operationId": "UpdateLocal",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateLocalForm"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LocalResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Bearer": [ ]
+          }
+        ]
+      }
+    },
+    "/api/locales/{id}/status": {
+      "patch": {
+        "tags": [
+          "Locales"
+        ],
+        "summary": "Activa o desactiva un local sin exigir el resto de los datos.",
+        "operationId": "SetLocalStatus",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LocalStatusRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LocalResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Bearer": [ ]
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -120,6 +497,38 @@
             "items": {
               "type": "string"
             }
+          }
+        }
+      },
+      "CreateLocalForm": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Nombre del local. Único entre todos, incluidos los inactivos, sin distinguir mayúsculas ni espacios de los extremos."
+          },
+          "address": {
+            "type": "string",
+            "description": "Dirección del local. No se exige un formato concreto."
+          },
+          "phone": {
+            "type": "string",
+            "description": "Teléfono del local. No se exige un formato concreto."
+          },
+          "schedule": {
+            "type": "string",
+            "description": "Horario semanal en JSON: arreglo de los siete días LocalScheduleDay, con las horas en formato HH:mm y los días cerrados marcados con isClosed."
+          },
+          "photo": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "description": "Foto opcional: JPG, PNG o WebP de hasta 5 MB.",
+                "$ref": "#/components/schemas/IFormFile"
+              }
+            ]
           }
         }
       },
@@ -169,6 +578,131 @@
             }
           }
         }
+      },
+      "IFormFile": {
+        "type": [
+          "null",
+          "string"
+        ],
+        "format": "binary"
+      },
+      "LocalPhotoSummary": {
+        "required": [
+          "contentType",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "contentType": {
+            "type": "string",
+            "description": "Tipo de contenido almacenado, por ejemplo image/png."
+          },
+          "version": {
+            "type": "string",
+            "description": "Versión de la foto: nombre del archivo generado por el servidor."
+          }
+        }
+      },
+      "LocalResponse": {
+        "required": [
+          "id",
+          "name",
+          "address",
+          "phone",
+          "isActive",
+          "schedule",
+          "photo"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "address": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "schedule": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LocalScheduleDay"
+            }
+          },
+          "photo": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/LocalPhotoSummary"
+              }
+            ]
+          }
+        }
+      },
+      "LocalScheduleDay": {
+        "required": [
+          "day",
+          "isClosed",
+          "opensAt",
+          "closesAt"
+        ],
+        "type": "object",
+        "properties": {
+          "day": {
+            "description": "Día de la semana.",
+            "$ref": "#/components/schemas/LocalWeekDay"
+          },
+          "isClosed": {
+            "type": "boolean",
+            "description": "Indica si el local no abre ese día."
+          },
+          "opensAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Hora de apertura en formato HH:mm. Null cuando el día está cerrado."
+          },
+          "closesAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Hora de cierre en formato HH:mm, posterior a la apertura. Null cuando el día está cerrado."
+          }
+        }
+      },
+      "LocalStatusRequest": {
+        "required": [
+          "isActive"
+        ],
+        "type": "object",
+        "properties": {
+          "isActive": {
+            "type": "boolean"
+          }
+        }
+      },
+      "LocalWeekDay": {
+        "enum": [
+          "Monday",
+          "Tuesday",
+          "Wednesday",
+          "Thursday",
+          "Friday",
+          "Saturday",
+          "Sunday"
+        ]
       },
       "LoginRequest": {
         "required": [
@@ -242,6 +776,42 @@
             ]
           }
         }
+      },
+      "UpdateLocalForm": {
+        "type": "object",
+        "properties": {
+          "photoAction": {
+            "type": "string",
+            "description": "keep conserva la foto actual, replace la sustituye por el archivo enviado y remove la quita."
+          },
+          "name": {
+            "type": "string",
+            "description": "Nombre del local. Único entre todos, incluidos los inactivos, sin distinguir mayúsculas ni espacios de los extremos."
+          },
+          "address": {
+            "type": "string",
+            "description": "Dirección del local. No se exige un formato concreto."
+          },
+          "phone": {
+            "type": "string",
+            "description": "Teléfono del local. No se exige un formato concreto."
+          },
+          "schedule": {
+            "type": "string",
+            "description": "Horario semanal en JSON: arreglo de los siete días LocalScheduleDay, con las horas en formato HH:mm y los días cerrados marcados con isClosed."
+          },
+          "photo": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "description": "Foto opcional: JPG, PNG o WebP de hasta 5 MB.",
+                "$ref": "#/components/schemas/IFormFile"
+              }
+            ]
+          }
+        }
       }
     },
     "securitySchemes": {
@@ -256,6 +826,9 @@
   "tags": [
     {
       "name": "Auth"
+    },
+    {
+      "name": "Locales"
     }
   ]
 }

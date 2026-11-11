@@ -11,6 +11,26 @@ export type AuthenticatedUser = {
   roles: Array<string>;
 };
 
+export type CreateLocalForm = {
+  /**
+   * Nombre del local. Único entre todos, incluidos los inactivos, sin distinguir mayúsculas ni espacios de los extremos.
+   */
+  name?: string;
+  /**
+   * Dirección del local. No se exige un formato concreto.
+   */
+  address?: string;
+  /**
+   * Teléfono del local. No se exige un formato concreto.
+   */
+  phone?: string;
+  /**
+   * Horario semanal en JSON: arreglo de los siete días LocalScheduleDay, con las horas en formato HH:mm y los días cerrados marcados con isClosed.
+   */
+  schedule?: string;
+  photo?: null | IFormFile;
+};
+
 export type HttpValidationProblemDetails = {
   type?: null | string;
   title?: null | string;
@@ -21,6 +41,55 @@ export type HttpValidationProblemDetails = {
     [key: string]: Array<string>;
   };
 };
+
+export type IFormFile = null | Blob | File;
+
+export type LocalPhotoSummary = {
+  /**
+   * Tipo de contenido almacenado, por ejemplo image/png.
+   */
+  contentType: string;
+  /**
+   * Versión de la foto: nombre del archivo generado por el servidor.
+   */
+  version: string;
+};
+
+export type LocalResponse = {
+  id: string;
+  name: string;
+  address: string;
+  phone: string;
+  isActive: boolean;
+  schedule: Array<LocalScheduleDay>;
+  photo: null | LocalPhotoSummary;
+};
+
+export type LocalScheduleDay = {
+  /**
+   * Día de la semana.
+   */
+  day: LocalWeekDay;
+  /**
+   * Indica si el local no abre ese día.
+   */
+  isClosed: boolean;
+  /**
+   * Hora de apertura en formato HH:mm. Null cuando el día está cerrado.
+   */
+  opensAt: null | string;
+  /**
+   * Hora de cierre en formato HH:mm, posterior a la apertura. Null cuando el día está cerrado.
+   */
+  closesAt: null | string;
+};
+
+export type LocalStatusRequest = {
+  isActive: boolean;
+};
+
+export type LocalWeekDay =
+  'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday' | 'Sunday';
 
 export type LoginRequest = {
   email: string;
@@ -39,6 +108,30 @@ export type ProblemDetails = {
   status?: null | number | string;
   detail?: null | string;
   instance?: null | string;
+};
+
+export type UpdateLocalForm = {
+  /**
+   * keep conserva la foto actual, replace la sustituye por el archivo enviado y remove la quita.
+   */
+  photoAction?: string;
+  /**
+   * Nombre del local. Único entre todos, incluidos los inactivos, sin distinguir mayúsculas ni espacios de los extremos.
+   */
+  name?: string;
+  /**
+   * Dirección del local. No se exige un formato concreto.
+   */
+  address?: string;
+  /**
+   * Teléfono del local. No se exige un formato concreto.
+   */
+  phone?: string;
+  /**
+   * Horario semanal en JSON: arreglo de los siete días LocalScheduleDay, con las horas en formato HH:mm y los días cerrados marcados con isClosed.
+   */
+  schedule?: string;
+  photo?: null | IFormFile;
 };
 
 export type LoginData = {
@@ -94,3 +187,182 @@ export type GetCurrentUserResponses = {
 };
 
 export type GetCurrentUserResponse = GetCurrentUserResponses[keyof GetCurrentUserResponses];
+
+export type ListLocalesData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: '/api/locales';
+};
+
+export type ListLocalesErrors = {
+  /**
+   * Unauthorized
+   */
+  401: ProblemDetails;
+  /**
+   * Forbidden
+   */
+  403: ProblemDetails;
+};
+
+export type ListLocalesError = ListLocalesErrors[keyof ListLocalesErrors];
+
+export type ListLocalesResponses = {
+  /**
+   * OK
+   */
+  200: Array<LocalResponse>;
+};
+
+export type ListLocalesResponse = ListLocalesResponses[keyof ListLocalesResponses];
+
+export type CreateLocalData = {
+  body: CreateLocalForm;
+  path?: never;
+  query?: never;
+  url: '/api/locales';
+};
+
+export type CreateLocalErrors = {
+  /**
+   * Bad Request
+   */
+  400: HttpValidationProblemDetails;
+  /**
+   * Unauthorized
+   */
+  401: ProblemDetails;
+  /**
+   * Forbidden
+   */
+  403: ProblemDetails;
+  /**
+   * Conflict
+   */
+  409: ProblemDetails;
+};
+
+export type CreateLocalError = CreateLocalErrors[keyof CreateLocalErrors];
+
+export type CreateLocalResponses = {
+  /**
+   * Created
+   */
+  201: LocalResponse;
+};
+
+export type CreateLocalResponse = CreateLocalResponses[keyof CreateLocalResponses];
+
+export type GetLocalPhotoData = {
+  body?: never;
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/api/locales/{id}/photo';
+};
+
+export type GetLocalPhotoErrors = {
+  /**
+   * Unauthorized
+   */
+  401: ProblemDetails;
+  /**
+   * Forbidden
+   */
+  403: ProblemDetails;
+  /**
+   * Not Found
+   */
+  404: ProblemDetails;
+};
+
+export type GetLocalPhotoError = GetLocalPhotoErrors[keyof GetLocalPhotoErrors];
+
+export type GetLocalPhotoResponses = {
+  /**
+   * OK
+   */
+  200: Blob | File;
+};
+
+export type GetLocalPhotoResponse = GetLocalPhotoResponses[keyof GetLocalPhotoResponses];
+
+export type UpdateLocalData = {
+  body: UpdateLocalForm;
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/api/locales/{id}';
+};
+
+export type UpdateLocalErrors = {
+  /**
+   * Bad Request
+   */
+  400: HttpValidationProblemDetails;
+  /**
+   * Unauthorized
+   */
+  401: ProblemDetails;
+  /**
+   * Forbidden
+   */
+  403: ProblemDetails;
+  /**
+   * Not Found
+   */
+  404: ProblemDetails;
+  /**
+   * Conflict
+   */
+  409: ProblemDetails;
+};
+
+export type UpdateLocalError = UpdateLocalErrors[keyof UpdateLocalErrors];
+
+export type UpdateLocalResponses = {
+  /**
+   * OK
+   */
+  200: LocalResponse;
+};
+
+export type UpdateLocalResponse = UpdateLocalResponses[keyof UpdateLocalResponses];
+
+export type SetLocalStatusData = {
+  body: LocalStatusRequest;
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/api/locales/{id}/status';
+};
+
+export type SetLocalStatusErrors = {
+  /**
+   * Unauthorized
+   */
+  401: ProblemDetails;
+  /**
+   * Forbidden
+   */
+  403: ProblemDetails;
+  /**
+   * Not Found
+   */
+  404: ProblemDetails;
+};
+
+export type SetLocalStatusError = SetLocalStatusErrors[keyof SetLocalStatusErrors];
+
+export type SetLocalStatusResponses = {
+  /**
+   * OK
+   */
+  200: LocalResponse;
+};
+
+export type SetLocalStatusResponse = SetLocalStatusResponses[keyof SetLocalStatusResponses];

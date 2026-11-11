@@ -2,6 +2,7 @@ using FluentValidation;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using MouseDent.Api.Auth;
 using MouseDent.Api.Common;
+using MouseDent.Api.Locales;
 using MouseDent.Application;
 using MouseDent.Infrastructure;
 
@@ -49,6 +50,7 @@ app.MapHealthChecks("/health", new HealthCheckOptions
 
 app.MapApiDocumentation();
 app.MapAuthEndpoints();
+app.MapLocalEndpoints();
 
 app.Run();
 

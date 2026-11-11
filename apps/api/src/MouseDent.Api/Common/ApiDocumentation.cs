@@ -49,6 +49,36 @@ public static class ApiDocumentation
                     });
                 }
 
+                // Las respuestas que no son JSON llevan bytes, no base64: se documentan
+                // como binarias para que el cliente generado reciba un Blob.
+                if (operation.Responses is { } responses)
+                {
+                    foreach (var response in responses.Values)
+                    {
+                        if (response.Content is not { } content)
+                        {
+                            continue;
+                        }
+
+                        foreach (var (mediaType, media) in content)
+                        {
+                            if (mediaType is "application/json" or "application/problem+json")
+                            {
+                                continue;
+                            }
+
+                            if (media.Schema is OpenApiSchema { Type: JsonSchemaType.String, Format: "byte" })
+                            {
+                                media.Schema = new OpenApiSchema
+                                {
+                                    Type = JsonSchemaType.String,
+                                    Format = "binary",
+                                };
+                            }
+                        }
+                    }
+                }
+
                 return Task.CompletedTask;
             });
         });
