@@ -1,0 +1,301 @@
+<section class="w-full">
+  <div class="mb-[30px] flex flex-wrap items-start justify-between gap-5">
+    <div class="min-w-0">
+      <p class="text-[11px] font-extrabold tracking-[1.6px] text-primary uppercase">
+        Administración de locales
+      </p>
+      <h1
+        class="mt-[7px] mb-2.5 font-display text-[27px] leading-[1.15] font-extrabold tracking-[-0.6px] text-foreground sm:text-[34px] sm:tracking-[-1px]"
+      >
+        Locales
+      </h1>
+      <p class="text-[13px] text-muted-foreground sm:text-sm">
+        Información y horarios para organizar la atención de tu clínica.
+      </p>
+    </div>
+    <a hlmBtn routerLink="/locales/nuevo">
+      <app-local-icon name="plus" class="size-4" />
+      Nuevo local
+    </a>
+  </div>
+
+  @if (savedNotice(); as message) {
+    <hlm-alert class="mb-5" role="status" variant="success">
+      <p class="flex items-center gap-2 font-semibold">{{ message }}</p>
+    </hlm-alert>
+  }
+
+  <div
+    class="mb-[17px] flex flex-col gap-[14px] sm:mb-[22px] sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-5"
+  >
+    <p class="text-[12px] text-muted-foreground">{{ countLabel() }}</p>
+
+    <div class="flex w-full flex-col gap-1.5 sm:w-auto sm:flex-row sm:items-center sm:gap-2.5">
+      <label
+        for="state-filter"
+        class="cursor-pointer text-[11px] font-extrabold tracking-[1.2px] text-muted-foreground uppercase"
+        >Estado</label
+      >
+      <div
+        hlmSelect
+        class="w-full sm:w-auto"
+        [value]="filter()"
+        [itemToString]="filterLabel"
+        (valueChange)="setFilter($event)"
+      >
+        <hlm-select-trigger [buttonId]="'state-filter'" [class]="triggerClasses">
+          <span
+            class="size-1.5 shrink-0 rounded-full"
+            [class]="filterDot()"
+            aria-hidden="true"
+          ></span>
+          <hlm-select-value />
+        </hlm-select-trigger>
+        <ng-template hlmSelectPortal>
+          <hlm-select-content>
+            <hlm-select-item value="all">
+              <span [class]="counts().all === 0 ? 'text-muted-foreground' : ''">
+                Todos los estados ({{ counts().all }})
+              </span>
+            </hlm-select-item>
+            <hlm-select-item value="active">
+              <span [class]="counts().active === 0 ? 'text-muted-foreground' : ''">
+                Activos ({{ counts().active }})
+              </span>
+            </hlm-select-item>
+            <hlm-select-item value="inactive">
+              <span [class]="counts().inactive === 0 ? 'text-muted-foreground' : ''">
+                Inactivos ({{ counts().inactive }})
+              </span>
+            </hlm-select-item>
+          </hlm-select-content>
+        </ng-template>
+      </div>
+    </div>
+  </div>
+
+  @switch (state()) {
+    @case ('loading') {
+      <div
+        class="overflow-hidden rounded-[14px] border border-border bg-card"
+        role="status"
+        aria-busy="true"
+      >
+        <span class="sr-only">Cargando locales…</span>
+        @for (row of [1, 2, 3]; track row) {
+          <div
+            class="flex items-center gap-5 border-t border-border px-[26px] py-6 first:border-t-0"
+          >
+            <div
+              class="h-[92px] w-[86px] shrink-0 rounded-lg bg-surface-green-deep md:h-24 md:w-[132px]"
+            ></div>
+            <div class="min-w-0 flex-1 space-y-2.5">
+              <div class="h-4 w-2/5 rounded bg-surface-green-deep"></div>
+              <div class="h-3 w-3/5 rounded bg-surface-green-deep"></div>
+            </div>
+          </div>
+        }
+      </div>
+    }
+
+    @case ('error') {
+      <div class="rounded-[14px] border border-border bg-card px-6 py-12 text-center">
+        <h2 class="font-display text-[21px] font-extrabold tracking-tight text-foreground">
+          No se pudieron cargar los locales
+        </h2>
+        <p class="mx-auto mt-2 max-w-md text-[13px] text-muted-foreground">{{ loadError() }}</p>
+        <button hlmBtn class="mt-5" type="button" (click)="load()">Reintentar</button>
+      </div>
+    }
+
+    @default {
+      @if (locals().length === 0) {
+        <div class="rounded-[14px] border border-border bg-card px-6 py-[42px] text-center">
+          <app-brand-mark class="h-[82px] w-[75px]" />
+          <h2
+            class="mt-[18px] font-display text-[21px] font-extrabold tracking-tight text-foreground"
+          >
+            Tu primer local empieza aquí
+          </h2>
+          <p class="mx-auto mt-3 max-w-[390px] text-[13px] text-muted-foreground">
+            Añade su información, una foto opcional y el horario de atención.
+          </p>
+          <a hlmBtn class="mt-5" routerLink="/locales/nuevo">
+            <app-local-icon name="plus" class="size-4" />
+            Registrar primer local
+          </a>
+        </div>
+      } @else if (visible().length === 0) {
+        <div class="rounded-[14px] border border-border bg-card px-6 py-[42px] text-center">
+          <h2 class="font-display text-[21px] font-extrabold tracking-tight text-foreground">
+            No hay locales con este estado
+          </h2>
+          <p class="mt-3 text-[13px] text-muted-foreground">
+            Elige otro estado para ver los demás locales.
+          </p>
+        </div>
+      } @else {
+        <div class="overflow-hidden rounded-[14px] border border-border bg-card">
+          <div
+            class="hidden min-h-12 gap-[18px] border-b border-border bg-surface-green px-[22px] py-[15px] text-[10px] font-extrabold tracking-[1px] text-muted-foreground uppercase xl:grid xl:grid-cols-[minmax(0,1.5fr)_minmax(130px,0.7fr)_80px_165px] 2xl:grid-cols-[minmax(0,1.6fr)_minmax(120px,0.65fr)_minmax(140px,0.7fr)_82px_180px] 2xl:gap-[22px] 2xl:px-[26px]"
+            aria-hidden="true"
+          >
+            <span>Local</span>
+            <span class="hidden 2xl:block">Contacto</span>
+            <span>Atención semanal</span>
+            <span>Estado</span>
+            <span class="text-right">Gestión</span>
+          </div>
+
+          @for (local of visible(); track local.id) {
+            <article
+              class="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-[13px] gap-y-[13px] border-t border-border px-4 py-[18px] first:border-t-0 xl:grid-cols-[minmax(0,1.5fr)_minmax(130px,0.7fr)_80px_165px] xl:gap-[18px] xl:px-[22px] xl:py-6 2xl:grid-cols-[minmax(0,1.6fr)_minmax(120px,0.65fr)_minmax(140px,0.7fr)_82px_180px] 2xl:gap-[22px] 2xl:px-[26px] 2xl:py-6"
+            >
+              <div class="col-span-2 flex min-w-0 items-center gap-[13px] xl:col-span-1 2xl:gap-5">
+                @if (local.photo) {
+                  <button
+                    class="rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none"
+                    type="button"
+                    [attr.aria-label]="'Ver la foto de ' + local.name"
+                    [disabled]="!photos().get(local.id)"
+                    (click)="openPhoto(local)"
+                  >
+                    <hlm-avatar size="photo">
+                      @if (photos().get(local.id); as url) {
+                        <img hlmAvatarImage [src]="url" [alt]="'Foto de ' + local.name" />
+                      }
+                      <span
+                        hlmAvatarFallback
+                        class="flex size-full flex-col items-center justify-center gap-1 rounded-lg bg-secondary p-1 text-center text-[10px] leading-tight text-secondary-foreground"
+                      >
+                        <app-local-icon name="image" class="size-5" />
+                        @if (failedPhotos().has(local.id)) {
+                          <span>Sin vista previa</span>
+                        }
+                      </span>
+                    </hlm-avatar>
+                  </button>
+                } @else {
+                  <hlm-avatar size="photo">
+                    <span
+                      hlmAvatarFallback
+                      class="flex size-full flex-col items-center justify-center gap-1.5 rounded-lg bg-surface-green-deep text-[11px] text-primary"
+                    >
+                      <app-local-icon name="building" class="size-6" />
+                      <span>Sin foto</span>
+                    </span>
+                  </hlm-avatar>
+                }
+
+                <div class="min-w-0">
+                  <h2
+                    class="text-[15px] leading-[1.35] font-extrabold tracking-[-0.2px] text-foreground [overflow-wrap:anywhere] xl:text-[15px] 2xl:text-[17px]"
+                  >
+                    {{ local.name }}
+                  </h2>
+                  <p
+                    class="mt-1.5 text-[11px] leading-[1.7] text-muted-foreground xl:text-xs 2xl:text-xs"
+                  >
+                    {{ local.address }}
+                  </p>
+                </div>
+              </div>
+
+              <div
+                class="row-contact hidden min-w-0 items-center gap-2 text-xs text-muted-foreground 2xl:flex"
+              >
+                <app-local-icon name="phone" class="size-[15px]" />
+                <span class="min-w-0 [overflow-wrap:anywhere]">{{ local.phone }}</span>
+              </div>
+
+              <div class="row-week hidden min-w-0 xl:block">
+                <div class="flex gap-1">
+                  @for (day of scheduleOf(local); track day.day) {
+                    <span
+                      class="grid size-[22px] place-items-center rounded-[5px] text-[10px]"
+                      [class]="
+                        day.isClosed
+                          ? 'bg-surface-green-deep text-muted-foreground'
+                          : 'bg-secondary font-extrabold text-secondary-foreground'
+                      "
+                      [title]="dayTitle(day)"
+                    >
+                      {{ dayLetter(day) }}
+                    </span>
+                  }
+                </div>
+                <p class="mt-2 text-[11px] text-muted-foreground">{{ attentionLabel(local) }}</p>
+              </div>
+
+              <div class="row-status">
+                <span hlmBadge [variant]="local.isActive ? 'default' : 'neutral'">
+                  <span
+                    class="size-1.5 rounded-full"
+                    [class]="local.isActive ? 'bg-primary' : 'bg-muted-foreground'"
+                    aria-hidden="true"
+                  ></span>
+                  {{ statusLabel(local) }}
+                </span>
+              </div>
+
+              <div class="row-actions flex items-center justify-end gap-[5px] justify-self-end">
+                <a hlmBtn variant="soft" size="sm" [routerLink]="['/locales', local.id, 'editar']">
+                  <app-local-icon name="edit" class="size-[15px]" />
+                  Editar local
+                </a>
+                <button
+                  hlmBtn
+                  size="xs"
+                  variant="ghost"
+                  type="button"
+                  class="text-[11px]"
+                  [class]="local.isActive ? 'text-foreground' : 'text-primary'"
+                  [disabled]="pendingStatusId() === local.id"
+                  (click)="requestStatusChange(local)"
+                >
+                  @if (pendingStatusId() === local.id) {
+                    {{ local.isActive ? 'Desactivando…' : 'Reactivando…' }}
+                  } @else {
+                    {{ local.isActive ? 'Desactivar' : 'Reactivar' }}
+                  }
+                </button>
+              </div>
+
+              @if (statusError(); as problem) {
+                @if (problem.id === local.id) {
+                  <hlm-alert class="col-span-full" variant="destructive">
+                    {{ problem.message }}
+                  </hlm-alert>
+                }
+              }
+            </article>
+          }
+        </div>
+
+        <p class="mt-4 flex items-start gap-[7px] text-[11px] text-muted-foreground">
+          <app-local-icon name="lock" class="mt-0.5 size-[13px]" />
+          Solo para administración. Las fotografías no se publican en esta entrega.
+        </p>
+      }
+    }
+  }
+</section>
+
+@if (confirmTarget(); as local) {
+  <app-confirm-dialog
+    [open]="true"
+    [title]="confirmTitle(local)"
+    [message]="confirmMessage(local)"
+    [confirmLabel]="confirmLabel(local)"
+    cancelLabel="Cancelar"
+    (confirmed)="confirmStatusChange()"
+    (cancelled)="cancelStatusChange()"
+  />
+}
+
+<app-photo-viewer
+  [open]="viewed() !== null"
+  [url]="viewedUrl()"
+  [title]="viewedTitle()"
+  (closed)="viewed.set(null)"
+/>

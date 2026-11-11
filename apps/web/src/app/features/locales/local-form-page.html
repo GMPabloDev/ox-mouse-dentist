@@ -1,0 +1,279 @@
+@switch (state()) {
+  @case ('loading') {
+    <section class="w-full" role="status" aria-busy="true">
+      <p class="sr-only">Cargando el local…</p>
+      <div class="mb-[30px] animate-pulse space-y-3">
+        <div class="h-4 w-32 rounded bg-surface-green-deep"></div>
+        <div class="h-9 w-56 rounded bg-surface-green-deep"></div>
+        <div class="h-4 w-72 rounded bg-surface-green-deep"></div>
+      </div>
+      <div
+        class="animate-pulse rounded-[14px] border border-border bg-card p-[21px_18px] md:rounded-2xl md:p-7"
+      >
+        <div class="h-5 w-48 rounded bg-surface-green-deep"></div>
+        <div class="mt-6 grid gap-4 md:grid-cols-2">
+          <div class="h-12 rounded-[9px] bg-surface-green-deep md:col-span-2"></div>
+          <div class="h-12 rounded-[9px] bg-surface-green-deep md:col-span-2"></div>
+          <div class="h-12 rounded-[9px] bg-surface-green-deep"></div>
+          <div class="h-60 rounded-xl bg-surface-green-deep"></div>
+        </div>
+      </div>
+    </section>
+  }
+
+  @case ('error') {
+    <section class="w-full rounded-[14px] border border-border bg-card px-6 py-12 text-center">
+      <h1 class="font-display text-[27px] font-extrabold tracking-tight text-foreground">
+        No se pudo cargar el local
+      </h1>
+      <p class="mx-auto mt-2 max-w-md text-[13px] text-muted-foreground">{{ formError() }}</p>
+      <div class="mt-5 flex flex-wrap justify-center gap-2">
+        <a hlmBtn variant="outline" routerLink="/locales">Volver a locales</a>
+        <button hlmBtn type="button" (click)="load()">Reintentar</button>
+      </div>
+    </section>
+  }
+
+  @case ('not-found') {
+    <section class="w-full rounded-[14px] border border-border bg-card px-6 py-12 text-center">
+      <h1 class="font-display text-[27px] font-extrabold tracking-tight text-foreground">
+        No encontramos ese local
+      </h1>
+      <p class="mx-auto mt-2 max-w-md text-[13px] text-muted-foreground">
+        Puede que ya no exista o que el enlace esté incompleto.
+      </p>
+      <a hlmBtn class="mt-5" routerLink="/locales">Volver a locales</a>
+    </section>
+  }
+
+  @default {
+    <form class="w-full" [formRoot]="localForm">
+      <div class="mb-[24px] flex flex-wrap items-start justify-between gap-3 md:mb-[30px]">
+        <div class="min-w-0">
+          <button hlmBtn variant="text" size="link" type="button" (click)="leave()">
+            <app-local-icon name="arrow-left" class="size-4" />
+            Volver a locales
+          </button>
+          <div class="mt-2 mb-2.5 flex flex-wrap items-center gap-4">
+            <h1
+              class="font-display text-[27px] leading-[1.15] font-extrabold tracking-[-0.6px] text-foreground sm:text-[34px] sm:tracking-[-1px]"
+            >
+              {{ isEdit ? 'Editar local' : 'Nuevo local' }}
+            </h1>
+            @if (isEdit) {
+              <span hlmBadge [variant]="saved()?.isActive ? 'default' : 'neutral'">
+                <span
+                  class="size-1.5 rounded-full"
+                  [class]="saved()?.isActive ? 'bg-primary' : 'bg-muted-foreground'"
+                  aria-hidden="true"
+                ></span>
+                {{ statusLabel() }}
+              </span>
+            }
+          </div>
+          <p class="text-[13px] text-muted-foreground md:text-sm">
+            Información, fotografía y horario de atención en un solo lugar.
+          </p>
+        </div>
+        <p class="hidden text-xs text-muted-foreground lg:block">
+          Todos los campos salvo la foto son obligatorios
+        </p>
+      </div>
+
+      @if (formError(); as message) {
+        <hlm-alert class="mb-5" variant="destructive">{{ message }}</hlm-alert>
+      }
+
+      <div class="grid gap-[18px] md:gap-6">
+        <section
+          class="min-w-0 rounded-[14px] border border-border bg-card p-[21px_18px] md:rounded-2xl md:p-7 lg:p-[28px_30px] 2xl:p-[30px_34px]"
+          aria-labelledby="local-information-heading"
+        >
+          <div class="mb-[22px] flex items-start gap-2.5 md:mb-[25px] md:gap-3.5">
+            <span
+              class="mt-0.5 grid size-7 shrink-0 place-items-center rounded-[9px] border border-border-soft bg-secondary text-[10px] font-extrabold text-primary md:size-8 md:text-[11px]"
+              aria-hidden="true"
+              >01</span
+            >
+            <div>
+              <h2
+                class="font-display text-[19px] font-extrabold tracking-tight text-foreground md:text-[21px]"
+                id="local-information-heading"
+              >
+                Conoce el local
+              </h2>
+              <p class="mt-0.5 text-xs text-muted-foreground md:text-[13px]">
+                Los datos que tu equipo necesita para identificarlo.
+              </p>
+            </div>
+          </div>
+
+          <div
+            class="grid gap-2 md:gap-[26px] xl:grid-cols-[minmax(0,1.12fr)_minmax(0,1fr)] xl:gap-12 2xl:gap-[60px]"
+          >
+            <div class="grid gap-[21px] md:grid-cols-2 md:gap-x-[22px] md:gap-y-[22px]">
+              <hlm-field class="md:col-span-2" [forceInvalid]="!!nameError()">
+                <label hlmFieldLabel for="local-name">Nombre del local</label>
+                <input
+                  hlmInput
+                  id="local-name"
+                  type="text"
+                  autocomplete="organization"
+                  placeholder="Ej. MouseDent Miraflores"
+                  [formField]="localForm.name"
+                  (input)="clearProblems('name')"
+                />
+                @if (nameError(); as message) {
+                  <hlm-field-error id="local-name-error" [forceShow]="true">
+                    {{ message }}
+                  </hlm-field-error>
+                } @else {
+                  <hlm-field-description id="local-name-hint">
+                    Un nombre distinto para cada local, incluso si está inactivo.
+                  </hlm-field-description>
+                }
+              </hlm-field>
+
+              <hlm-field class="md:col-span-2" [forceInvalid]="!!addressError()">
+                <label hlmFieldLabel for="local-address">Dirección</label>
+                <input
+                  hlmInput
+                  id="local-address"
+                  type="text"
+                  autocomplete="street-address"
+                  placeholder="Avenida, número y distrito"
+                  [formField]="localForm.address"
+                  (input)="clearProblems('address')"
+                />
+                @if (addressError(); as message) {
+                  <hlm-field-error id="local-address-error" [forceShow]="true">
+                    {{ message }}
+                  </hlm-field-error>
+                }
+              </hlm-field>
+
+              <hlm-field [forceInvalid]="!!phoneError()">
+                <label hlmFieldLabel for="local-phone">Teléfono</label>
+                <input
+                  hlmInput
+                  id="local-phone"
+                  type="tel"
+                  autocomplete="tel"
+                  placeholder="Número de contacto"
+                  [formField]="localForm.phone"
+                  (input)="clearProblems('phone')"
+                />
+                @if (phoneError(); as message) {
+                  <hlm-field-error id="local-phone-error" [forceShow]="true">
+                    {{ message }}
+                  </hlm-field-error>
+                }
+              </hlm-field>
+            </div>
+
+            <div>
+              <div class="mb-2 flex items-center justify-between gap-2">
+                <span class="text-[13px] font-bold text-foreground">Fotografía del local</span>
+                <span class="text-xs text-muted-foreground">Opcional</span>
+              </div>
+              <app-photo-field
+                [previewUrl]="previewUrl()"
+                [busy]="photoLoading()"
+                [state]="photoState()"
+                [fileLabel]="photoLabel()"
+                [fileDetail]="photoDetail()"
+                [error]="photoError() ?? serverProblems().photo ?? null"
+                [canUndo]="canUndoPhoto()"
+                [undoLabel]="undoLabel()"
+                (fileChosen)="onFileChosen($event)"
+                (remove)="removePhoto()"
+                (undo)="undoPhoto()"
+                (view)="viewerOpen.set(true)"
+              />
+            </div>
+          </div>
+        </section>
+
+        <section
+          class="min-w-0 rounded-[14px] border border-border bg-card p-[21px_18px] md:rounded-2xl md:p-7 lg:p-[28px_30px] 2xl:p-[30px_34px]"
+          aria-labelledby="local-schedule-heading"
+        >
+          <div class="flex items-start gap-2.5 md:gap-3.5">
+            <span
+              class="mt-0.5 grid size-7 shrink-0 place-items-center rounded-[9px] border border-border-soft bg-secondary text-[10px] font-extrabold text-primary md:size-8 md:text-[11px]"
+              aria-hidden="true"
+              >02</span
+            >
+            <div>
+              <h2
+                class="font-display text-[19px] font-extrabold tracking-tight text-foreground md:text-[21px]"
+                id="local-schedule-heading"
+              >
+                Una semana de atención
+              </h2>
+              <p class="mt-0.5 text-xs text-muted-foreground md:text-[13px]">
+                Un horario del local. La disponibilidad de profesionales se define aparte.
+              </p>
+            </div>
+          </div>
+
+          @if (scheduleError(); as message) {
+            <hlm-alert class="mt-5" variant="destructive">{{ message }}</hlm-alert>
+          }
+
+          <div class="mt-6">
+            <app-schedule-editor
+              [week]="model().schedule"
+              [dayErrors]="dayErrors()"
+              (weekChange)="onWeekChange($event)"
+            />
+          </div>
+        </section>
+      </div>
+
+      <div
+        class="sticky bottom-0 z-10 mt-5 flex flex-wrap items-center gap-2 border-t border-border bg-background py-3 md:py-4"
+      >
+        <p
+          class="flex w-full items-center gap-2 text-xs text-muted-foreground sm:mr-auto sm:w-auto"
+        >
+          <app-local-icon name="info" class="size-4 text-primary" />
+          {{ saveStatus() }}
+        </p>
+        <button
+          hlmBtn
+          variant="outline"
+          class="flex-1 sm:flex-none"
+          type="button"
+          [disabled]="saving()"
+          (click)="leave()"
+        >
+          Cancelar
+        </button>
+        <button hlmBtn class="flex-1 sm:flex-none" type="submit" [disabled]="saving()">
+          @if (!saving()) {
+            <app-local-icon name="check" class="size-4" />
+          }
+          {{ saving() ? 'Guardando…' : isEdit ? 'Guardar cambios' : 'Crear local' }}
+        </button>
+      </div>
+    </form>
+  }
+}
+
+<app-confirm-dialog
+  [open]="discardOpen()"
+  title="¿Descartar los cambios?"
+  message="El local conservará su última versión guardada, incluida la foto."
+  confirmLabel="Descartar cambios"
+  cancelLabel="Seguir editando"
+  (confirmed)="discardChanges()"
+  (cancelled)="discardOpen.set(false)"
+/>
+
+<app-photo-viewer
+  [open]="viewerOpen()"
+  [url]="previewUrl()"
+  [title]="viewerTitle()"
+  (closed)="viewerOpen.set(false)"
+/>
