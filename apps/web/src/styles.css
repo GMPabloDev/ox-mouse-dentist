@@ -5,81 +5,170 @@
 
 @import '@spartan-ng/brain/hlm-tailwind-preset.css';
 
+/* Identidad «Abrazo»: turquesa de marca, fondos marfil y titulares Nunito. */
 :root {
   color-scheme: light;
 
   --font-sans:
-    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans',
-    sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+    'Nunito Sans', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    sans-serif;
+  --font-heading: 'Nunito', 'Nunito Sans', ui-sans-serif, system-ui, sans-serif;
 
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.129 0.042 264.695);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.129 0.042 264.695);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.129 0.042 264.695);
-  --primary: oklch(0.208 0.042 265.755);
-  --primary-foreground: oklch(0.984 0.003 247.858);
-  --secondary: oklch(0.968 0.007 247.896);
-  --secondary-foreground: oklch(0.208 0.042 265.755);
-  --muted: oklch(0.968 0.007 247.896);
-  --muted-foreground: oklch(0.554 0.046 257.417);
-  --accent: oklch(0.968 0.007 247.896);
-  --accent-foreground: oklch(0.208 0.042 265.755);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.929 0.013 255.508);
-  --input: oklch(0.929 0.013 255.508);
-  --ring: oklch(0.704 0.04 256.788);
-  --sidebar: oklch(0.984 0.003 247.858);
-  --sidebar-foreground: oklch(0.129 0.042 264.695);
-  --sidebar-primary: oklch(0.208 0.042 265.755);
-  --sidebar-primary-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-accent: oklch(0.968 0.007 247.896);
-  --sidebar-accent-foreground: oklch(0.208 0.042 265.755);
-  --sidebar-border: oklch(0.929 0.013 255.508);
-  --sidebar-ring: oklch(0.704 0.04 256.788);
+  /* Marca */
+  --brand-teal: #137f79;
+  --brand-mint: #99dad0;
+  --brand-coral: #ef756a;
+  --brand-peach: #ffe0ca;
+  --brand-ivory: #fffaf5;
+  --brand-ink: #2b3837;
+
+  --chart-1: #137f79;
+  --chart-2: #bd5652;
+  --chart-3: #996923;
+  --chart-4: #6265a8;
+  --chart-5: #36775c;
+
+  --radius: 0.875rem;
+  --background: #fffaf5;
+  --foreground: #2b3837;
+  --card: #ffffff;
+  --card-foreground: #2b3837;
+  --popover: #ffffff;
+  --popover-foreground: #2b3837;
+  --primary: #137f79;
+  --primary-foreground: #ffffff;
+  --secondary: #e4f4ef;
+  --secondary-foreground: #215651;
+  --muted: #f4efea;
+  --muted-foreground: #5c6965;
+  --accent: #ffe0ca;
+  --accent-foreground: #543a30;
+  --destructive: #b83b43;
+  --destructive-foreground: #ffffff;
+  --border: #e4e6df;
+  --input: #81938b;
+  --ring: #137f79;
+
+  --sidebar: #faf6f0;
+  --sidebar-foreground: #2b3837;
+  --sidebar-primary: #137f79;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #e4f4ef;
+  --sidebar-accent-foreground: #215651;
+  --sidebar-border: #e3e6df;
+  --sidebar-ring: #137f79;
+
+  --success: #18765d;
+  --success-foreground: #ffffff;
+  --warning: #f8e3ae;
+  --warning-foreground: #704b12;
+  --info: #d8ecec;
+  --info-foreground: #245253;
+
+  --brand-coral-soft: #ffe9df;
+  --brand-mint-soft: #e4f4ef;
+  --brand-peach-soft: #fff0e5;
+
+  /* Superficies verde-grisáceas de la referencia de gestión de locales */
+  --surface-green: #f4f7f2;
+  --surface-green-deep: #e9efea;
+  --border-green: #cbd8cf;
+  --border-soft: #d2e8dc;
+  --border-strong: #a3b4aa;
+  --border-mint: #b7d9cd;
 }
 
 :root.dark {
   color-scheme: dark;
 
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --background: oklch(0.129 0.042 264.695);
-  --foreground: oklch(0.984 0.003 247.858);
-  --card: oklch(0.208 0.042 265.755);
-  --card-foreground: oklch(0.984 0.003 247.858);
-  --popover: oklch(0.208 0.042 265.755);
-  --popover-foreground: oklch(0.984 0.003 247.858);
-  --primary: oklch(0.929 0.013 255.508);
-  --primary-foreground: oklch(0.208 0.042 265.755);
-  --secondary: oklch(0.279 0.041 260.031);
-  --secondary-foreground: oklch(0.984 0.003 247.858);
-  --muted: oklch(0.279 0.041 260.031);
-  --muted-foreground: oklch(0.704 0.04 256.788);
-  --accent: oklch(0.279 0.041 260.031);
-  --accent-foreground: oklch(0.984 0.003 247.858);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.551 0.027 264.364);
-  --sidebar: oklch(0.208 0.042 265.755);
-  --sidebar-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-primary: oklch(0.984 0.003 247.858);
-  --sidebar-primary-foreground: oklch(0.208 0.042 265.755);
-  --sidebar-accent: oklch(0.279 0.041 260.031);
-  --sidebar-accent-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.551 0.027 264.364);
+  --brand-teal: #86dfd2;
+  --brand-mint: #75cdbd;
+  --brand-coral: #ff9a8a;
+  --brand-peach: #ffd6c2;
+  --brand-ivory: #fffaf5;
+  --brand-ink: #eaf5f0;
+
+  --chart-1: #86dfd2;
+  --chart-2: #ffa99a;
+  --chart-3: #e9c68e;
+  --chart-4: #b3b6f3;
+  --chart-5: #9ddfb0;
+
+  --background: #142222;
+  --foreground: #eaf5f0;
+  --card: #1c2d2b;
+  --card-foreground: #eaf5f0;
+  --popover: #213431;
+  --popover-foreground: #eaf5f0;
+  --primary: #86dfd2;
+  --primary-foreground: #123c39;
+  --secondary: #294440;
+  --secondary-foreground: #eaf5f0;
+  --muted: #263936;
+  --muted-foreground: #b6cfc7;
+  --accent: #46352f;
+  --accent-foreground: #ffe3d3;
+  --destructive: #f18e87;
+  --destructive-foreground: #3c1b1b;
+  --border: #39514b;
+  --input: #65877f;
+  --ring: #86dfd2;
+
+  --sidebar: #182b29;
+  --sidebar-foreground: #eaf5f0;
+  --sidebar-primary: #86dfd2;
+  --sidebar-primary-foreground: #123c39;
+  --sidebar-accent: #2d4742;
+  --sidebar-accent-foreground: #eaf5f0;
+  --sidebar-border: #38504a;
+  --sidebar-ring: #86dfd2;
+
+  --success: #7bd6ac;
+  --success-foreground: #193d2f;
+  --warning: #65492b;
+  --warning-foreground: #fff1d3;
+  --info: #2b5356;
+  --info-foreground: #e1f5f3;
+
+  --brand-coral-soft: #4b3330;
+  --brand-mint-soft: #294440;
+  --brand-peach-soft: #46352f;
+
+  --surface-green: #1f3330;
+  --surface-green-deep: #182a28;
+  --border-green: #39514b;
+  --border-soft: #2d4742;
+  --border-strong: #4a635c;
+  --border-mint: #39514b;
+}
+
+@theme inline {
+  --font-display: var(--font-heading);
+
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+
+  --color-brand-teal: var(--brand-teal);
+  --color-brand-mint: var(--brand-mint);
+  --color-brand-coral: var(--brand-coral);
+  --color-brand-peach: var(--brand-peach);
+  --color-brand-ivory: var(--brand-ivory);
+  --color-brand-ink: var(--brand-ink);
+  --color-brand-coral-soft: var(--brand-coral-soft);
+  --color-brand-mint-soft: var(--brand-mint-soft);
+  --color-brand-peach-soft: var(--brand-peach-soft);
+
+  --color-surface-green: var(--surface-green);
+  --color-surface-green-deep: var(--surface-green-deep);
+  --color-border-green: var(--border-green);
+  --color-border-soft: var(--border-soft);
+  --color-border-strong: var(--border-strong);
+  --color-border-mint: var(--border-mint);
 }
 
 @layer base {
@@ -90,6 +179,10 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground antialiased;
+    @apply bg-background text-foreground font-sans antialiased;
+
+    /* La referencia de producto fija el cuerpo en 15 px. */
+    font-size: 15px;
+    line-height: 1.5;
   }
 }

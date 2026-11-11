@@ -10,7 +10,19 @@
     "experimentalDecorators": true,
     "importHelpers": true,
     "target": "ES2022",
-    "module": "preserve"
+    "module": "preserve",
+    "paths": {
+      "@mousedent/ui/select": ["./src/app/ui/select/src/index.ts"],
+      "@mousedent/ui/utils": ["./src/app/ui/utils/src/index.ts"],
+      "@mousedent/ui/input": ["./src/app/ui/input/src/index.ts"],
+      "@mousedent/ui/button": ["./src/app/ui/button/src/index.ts"],
+      "@mousedent/ui/badge": ["./src/app/ui/badge/src/index.ts"],
+      "@mousedent/ui/avatar": ["./src/app/ui/avatar/src/index.ts"],
+      "@mousedent/ui/alert": ["./src/app/ui/alert/src/index.ts"],
+      "@mousedent/ui/field": ["./src/app/ui/field/src/index.ts"],
+      "@mousedent/ui/label": ["./src/app/ui/label/src/index.ts"],
+      "@mousedent/ui/separator": ["./src/app/ui/separator/src/index.ts"]
+    }
   },
   "angularCompilerOptions": {
     "enableI18nLegacyMessageIdFormat": false,
