@@ -150,6 +150,9 @@ Los comandos `db:*` necesitan que ejecutes `dotnet tool restore` al menos una ve
 - Pruebas de comportamiento. Integración para endpoints y unitarias para casos de uso.
 - Migraciones en `Infrastructure/Persistence/Migrations`.
 - `Jwt:SigningKey` solo en Development. En producción se inyecta `Jwt__SigningKey`.
+- En Development la API siembra los roles y la cuenta de administración. Las credenciales y su
+  configuración están en el README; no las dupliques en otros documentos ni crees administradores
+  desde el producto.
 
 ## Decisiones
 
@@ -200,7 +203,7 @@ Temporal no se usa mientras Safari e iOS no lo envíen de forma estable.
 
 ## Pendiente
 
-- Rutas y UI de las historias H-01 a H-13.
+- Rutas y UI de las historias H-01 y H-03 a H-13.
 - Canal de verificación de contacto y proveedor de SMS para H-10 y H-13.
 - Modelo de autorización por local para H-06.
 - Refresh tokens. Hoy el token dura 480 minutos y no se renueva.

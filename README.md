@@ -1,8 +1,8 @@
 # MouseDent
 
 Monorepo de MouseDent: API en .NET 10 y web en Angular 22. La web renderiza en el servidor las
-páginas públicas y deja el panel del personal en el navegador. El frontend queda sin rutas de
-producto; cada spec agrega las suyas y declara su modo de renderizado.
+páginas públicas y deja el panel del personal en el navegador. Las rutas de producto las agrega cada
+spec y declaran su modo de renderizado.
 
 La arquitectura, las capas y las convenciones para agentes están en [AGENTS.md](AGENTS.md).
 
@@ -28,22 +28,36 @@ La arquitectura, las capas y las convenciones para agentes están en [AGENTS.md]
    npm run dev
    ```
 
-3. Abre la web en <http://localhost:4200>. La aplicación arranca sin rutas de producto.
+3. Abre la web en <http://localhost:4200>. La aplicación arranca en la pantalla de acceso.
 
 La API aplica las migraciones y crea la cuenta de desarrollo al arrancar. La base SQLite queda en
 `apps/api/src/MouseDent.Api/mousedent.db`.
 
-| Recurso              | URL                                   |
-| -------------------- | ------------------------------------- |
+| Recurso              | URL                                     |
+| -------------------- | --------------------------------------- |
 | Web                  | <http://localhost:4200>                 |
 | API                  | <http://localhost:5080>                 |
 | Documentación Scalar | <http://localhost:5080/scalar/v1>       |
 | Documento OpenAPI    | <http://localhost:5080/openapi/v1.json> |
 | Salud de la API      | <http://localhost:5080/health>          |
 
-Cuenta de desarrollo: `admin@mousedent.local` con la contraseña `Admin123!`. El sembrado solo ocurre
-en Development, cuando `Seed:Enabled` es true. La cuenta sirve para probar los endpoints de
-autenticación; la pantalla de acceso llega en su spec.
+### Cuenta de desarrollo
+
+| Campo      | Valor                    |
+| ---------- | ------------------------ |
+| Correo     | `admin@mousedent.local`  |
+| Contraseña | `Admin123!`              |
+| Perfil     | `Administrador`          |
+| Nombre     | Administración MouseDent |
+
+La API crea esta cuenta al arrancar, junto con los roles `Administrador`, `Recepcion` y
+`Profesional`. Solo ocurre en Development, cuando `Seed:Enabled` es true, y los valores salen de
+`apps/api/src/MouseDent.Api/appsettings.Development.json` (`Seed:AdminEmail`, `Seed:AdminPassword`,
+`Seed:AdminDisplayName`). Cambiar la contraseña allí exige recrear la base o la cuenta: el sembrado
+no actualiza una cuenta existente.
+
+Con esa cuenta se entra por <http://localhost:4200/acceso> y se llega a la gestión de locales en
+`/locales`. No se crea ningún administrador desde la web.
 
 ## Comandos
 
@@ -100,5 +114,9 @@ Variables de entorno:
 | `ConnectionStrings__Default` | Cadena de conexión. Por defecto `Data Source=mousedent.db`.        |
 | `API_ORIGIN`                 | Origen absoluto de la API para las peticiones del SSR.             |
 | `NG_ALLOWED_HOSTS`           | Hosts permitidos por el servidor SSR. Separa varios con comas.     |
+
+Las fotos de los locales se guardan en `Media:PhotosPath` (variable `Media__PhotosPath`). Si no se
+configura, se usa la carpeta de datos locales del usuario que ejecuta la API. Ese almacenamiento
+debe conservarse y respaldarse junto con la base de datos.
 
 La aplicación no arranca fuera de Development si `Jwt:SigningKey` conserva el valor de desarrollo.

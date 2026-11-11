@@ -1,6 +1,6 @@
 # SPEC 01 — Acceso de administración y gestión de locales
 
-> **Status:** Aprobada **Date:** 2026-11-10 **Objective:** Permitir que el administrador inicie
+> **Status:** Implementada **Date:** 2026-11-10 **Objective:** Permitir que el administrador inicie
 > sesión y gestione los locales de MouseDent. **Historia de origen:** H-02 en
 > backlogs/backlog-v1-operacion-interna.md
 
@@ -76,8 +76,7 @@
 ## Referencia visual elegida
 
 El usuario eligió el listado A, el formulario de creación de la versión 2 y el horario A. Esta
-selección define la referencia de UI de H-02. La spec permanece en `Draft` y requiere revisión y
-aprobación manual antes de implementar.
+selección define la referencia de UI de H-02.
 
 El prototipo local está en `../prototypes/ox-prototype/locales-abrazo-v2-20261110/`, con entrada en
 `../prototypes/ox-prototype/locales-abrazo-v2-20261110/index.html`. Las rutas son relativas a esta
@@ -92,9 +91,9 @@ spec.
 ### Alcance de la referencia
 
 - El listado presenta los locales en filas con fotografía o indicación de ausencia de foto, nombre,
-  dirección, estado textual y acciones de gestión. En escritorio muestra también contacto y atención
-  semanal. En pantallas estrechas reorganiza la información y las acciones sin exigir desplazamiento
-  horizontal.
+  dirección, estado textual y acciones de gestión. En escritorio muestra también la atención semanal
+  desde 1280 px de viewport y el contacto desde 1536 px, como la referencia elegida. En pantallas
+  estrechas reorganiza la información y las acciones sin exigir desplazamiento horizontal.
 - El formulario de creación presenta datos y fotografía lado a lado cuando hay ancho suficiente y
   los apila en móvil. El área de fotografía tiene vista previa grande, selección de archivo,
   arrastre, cambio y eliminación. Permite ampliar el original y deshacer un cambio o eliminación
@@ -170,40 +169,40 @@ quedan registrados en la spec, sin promover el código del experimento a producc
 
 ## Criterios de aceptación
 
-- [ ] El administrador preparado en Development puede iniciar sesión desde la web, recargar y seguir
+- [x] El administrador preparado en Development puede iniciar sesión desde la web, recargar y seguir
       autenticado mientras el token sea válido.
-- [ ] Al cerrar sesión o caducar el token, el acceso a la gestión requiere iniciar sesión otra vez.
-- [ ] La web muestra un error para credenciales incorrectas y no distingue entre cuenta inexistente
+- [x] Al cerrar sesión o caducar el token, el acceso a la gestión requiere iniciar sesión otra vez.
+- [x] La web muestra un error para credenciales incorrectas y no distingue entre cuenta inexistente
       y contraseña incorrecta.
-- [ ] La API rechaza las operaciones de locales y fotos sin autenticación y las deniega a cuentas
+- [x] La API rechaza las operaciones de locales y fotos sin autenticación y las deniega a cuentas
       sin perfil `Administrador`.
-- [ ] Con una base sin locales, el administrador ve una lista vacía y puede registrar los locales
+- [x] Con una base sin locales, el administrador ve una lista vacía y puede registrar los locales
       existentes desde la aplicación.
-- [ ] El administrador puede consultar y editar locales activos e inactivos, desactivar uno y
+- [x] El administrador puede consultar y editar locales activos e inactivos, desactivar uno y
       reactivarlo sin perder sus datos.
-- [ ] El sistema rechaza un nombre repetido, incluso si difiere solo en mayúsculas, minúsculas o
+- [x] El sistema rechaza un nombre repetido, incluso si difiere solo en mayúsculas, minúsculas o
       espacios al principio o al final, también cuando el local existente está inactivo.
-- [ ] El sistema exige nombre, dirección, teléfono y un horario con al menos un día abierto. No
+- [x] El sistema exige nombre, dirección, teléfono y un horario con al menos un día abierto. No
       exige un formato concreto de dirección o teléfono.
-- [ ] En cada día abierto, el sistema exige una apertura anterior al cierre dentro del mismo día.
+- [x] En cada día abierto, el sistema exige una apertura anterior al cierre dentro del mismo día.
       Permite marcar días cerrados.
-- [ ] El administrador puede guardar un local sin foto y subir, sustituir o quitar una foto JPG, PNG
+- [x] El administrador puede guardar un local sin foto y subir, sustituir o quitar una foto JPG, PNG
       o WebP de hasta 5 MB.
-- [ ] La API rechaza una foto que no cumpla los tipos o el tamaño permitidos.
-- [ ] Tras guardar y volver a entrar, se conservan los datos, el estado, el horario y la foto del
+- [x] La API rechaza una foto que no cumpla los tipos o el tamaño permitidos.
+- [x] Tras guardar y volver a entrar, se conservan los datos, el estado, el horario y la foto del
       local.
-- [ ] Cancelar o fallar un guardado conserva la versión previamente guardada, incluida la foto. Una
+- [x] Cancelar o fallar un guardado conserva la versión previamente guardada, incluida la foto. Una
       creación fallida no deja un local visible.
-- [ ] La web presenta los errores de validación y permite corregir los datos introducidos. Ante un
+- [x] La web presenta los errores de validación y permite corregir los datos introducidos. Ante un
       fallo de consulta o guardado, muestra el error y permite reintentar.
-- [ ] El acceso y la gestión de locales se pueden utilizar en móvil y escritorio.
-- [ ] `npm test` y `npm run build` finalizan correctamente y los artefactos OpenAPI y del cliente
+- [x] El acceso y la gestión de locales se pueden utilizar en móvil y escritorio.
+- [x] `npm test` y `npm run build` finalizan correctamente y los artefactos OpenAPI y del cliente
       generado acompañan al cambio de contrato.
-- [ ] El listado usa la variante A de filas con fotografía y distingue locales activos, inactivos y
+- [x] El listado usa la variante A de filas con fotografía y distingue locales activos, inactivos y
       sin foto. Su adaptación a móvil no exige desplazamiento horizontal.
-- [ ] El formulario de creación sigue la distribución y los controles de fotografía de la versión 2
+- [x] El formulario de creación sigue la distribución y los controles de fotografía de la versión 2
       elegida, sin incluir controles de comparación ni simulación.
-- [ ] El horario usa la variante A por grupos: permite seleccionar días, aplicar un tramo o
+- [x] El horario usa la variante A por grupos: permite seleccionar días, aplicar un tramo o
       cerrarlos y revisar el resumen semanal antes de guardar el local.
 
 ## Decisiones
