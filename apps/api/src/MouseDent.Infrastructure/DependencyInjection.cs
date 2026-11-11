@@ -8,7 +8,9 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using MouseDent.Application.Auth;
+using MouseDent.Application.Locales;
 using MouseDent.Infrastructure.Auth;
+using MouseDent.Infrastructure.Locales;
 using MouseDent.Infrastructure.Persistence;
 
 namespace MouseDent.Infrastructure;
@@ -45,6 +47,15 @@ public static class DependencyInjection
 
         services.AddScoped<IStaffAccounts, IdentityStaffAccounts>();
         services.AddSingleton<ITokenIssuer, JwtTokenIssuer>();
+
+        services.AddOptions<LocalPhotoOptions>()
+            .Bind(configuration.GetSection(LocalPhotoOptions.SectionName));
+
+        services.AddSingleton<FileSystemLocalPhotos>();
+        services.AddSingleton<ILocalPhotos>(provider => provider.GetRequiredService<FileSystemLocalPhotos>());
+        services.AddHostedService<LocalPhotoStorageInitializationService>();
+
+        services.AddScoped<ILocales, EfLocales>();
 
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer();

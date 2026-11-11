@@ -24,4 +24,8 @@
     <ProjectReference Include="../MouseDent.Application/MouseDent.Application.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="MouseDent.Api.Tests" />
+  </ItemGroup>
+
 </Project>
