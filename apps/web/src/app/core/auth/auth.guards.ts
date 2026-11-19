@@ -28,3 +28,20 @@ export const requireAdministrator: CanActivateFn = () => {
 
   return session.isAdministrator() ? true : router.createUrlTree(['/sin-acceso']);
 };
+
+/**
+ * La bienvenida es el destino de recepción y profesionales mientras no existan
+ * sus módulos. Administración vuelve a su panel: no debe leer que no tiene
+ * módulos de trabajo.
+ */
+export const requireNonAdministrator: CanActivateFn = () => {
+  const session = inject(SessionService);
+  const router = inject(Router);
+
+  if (!session.isSessionActive()) {
+    session.expire();
+    return router.createUrlTree(['/acceso']);
+  }
+
+  return session.isAdministrator() ? router.createUrlTree(['/locales']) : true;
+};

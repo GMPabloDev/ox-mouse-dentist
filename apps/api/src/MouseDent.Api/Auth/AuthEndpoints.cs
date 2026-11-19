@@ -1,6 +1,8 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using MouseDent.Api.Common;
 using MouseDent.Application.Auth;
 using MouseDent.Domain.Auth;
@@ -30,6 +32,25 @@ public static class AuthEndpoints
             .WithSummary("Devuelve la cuenta autenticada.")
             .Produces<AuthenticatedUser>()
             .ProducesProblem(StatusCodes.Status401Unauthorized);
+
+        group.MapPost("/password-recovery", RequestPasswordRecoveryAsync)
+            .AllowAnonymous()
+            .AddEndpointFilter<ValidationFilter<PasswordRecoveryRequest>>()
+            .RequireRateLimiting(RateLimitPolicies.PasswordRecovery)
+            .WithName("RequestPasswordRecovery")
+            .WithSummary("Solicita un enlace de recuperación sin confirmar si la cuenta existe.")
+            .Produces(StatusCodes.Status202Accepted)
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status429TooManyRequests);
+
+        group.MapPost("/password", ResetPasswordAsync)
+            .AllowAnonymous()
+            .AddEndpointFilter<ValidationFilter<ResetPasswordRequest>>()
+            .WithName("ResetPassword")
+            .WithSummary("Establece la contraseña con un enlace de invitación o recuperación.")
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status400BadRequest);
 
         return app;
     }
@@ -78,6 +99,56 @@ public static class AuthEndpoints
             : TypedResults.Ok(ToResponse(account));
     }
 
+    /// <summary>
+    /// La respuesta es la misma exista la cuenta, esté inactiva o se haya enviado
+    /// el enlace. El registro guarda el fallo de correo sin el enlace ni la cuenta.
+    /// </summary>
+    private static async Task<StatusCodeHttpResult> RequestPasswordRecoveryAsync(
+        [FromBody] PasswordRecoveryRequest request,
+        StaffAccessService access,
+        ILoggerFactory loggerFactory,
+        CancellationToken cancellationToken)
+    {
+        var status = await access.RequestRecoveryAsync(request.Email, cancellationToken);
+
+        if (status is PasswordRecoveryStatus.Failed)
+        {
+            loggerFactory.CreateLogger("MouseDent.Api.Auth.PasswordRecovery")
+                .LogWarning("No se pudo enviar un correo de recuperación de acceso.");
+        }
+
+        return TypedResults.StatusCode(StatusCodes.Status202Accepted);
+    }
+
+    private static async Task<Results<NoContent, ValidationProblem, ProblemHttpResult>> ResetPasswordAsync(
+        [FromBody] ResetPasswordRequest request,
+        StaffAccessService access,
+        IOptions<IdentityOptions> identity,
+        CancellationToken cancellationToken)
+    {
+        var result = await access.ResetPasswordAsync(request.Token, request.Password, cancellationToken);
+
+        return result.Status switch
+        {
+            PasswordResetStatus.Reset => TypedResults.NoContent(),
+            PasswordResetStatus.LinkUnusable => LinkUnavailableProblem(),
+            _ => TypedResults.ValidationProblem(new Dictionary<string, string[]>
+            {
+                [nameof(ResetPasswordRequest.Password)] =
+                    [.. StaffPasswordMessages.ToMessages(result.PasswordErrors, identity.Value)],
+            }),
+        };
+    }
+
+    private static ProblemHttpResult LinkUnavailableProblem() => TypedResults.Problem(
+        title: "Enlace no disponible",
+        detail: "Este enlace ya no está disponible. Solicita recuperar tu acceso o pide a administración una nueva invitación.",
+        statusCode: StatusCodes.Status400BadRequest);
+
+    /// <summary>
+    /// La cuenta tiene un solo perfil; el contrato conserva la lista de roles del
+    /// token con un único elemento para no romper al cliente actual.
+    /// </summary>
     private static AuthenticatedUser ToResponse(StaffAccount account) =>
-        new(account.Id, account.Email, account.DisplayName, account.Roles);
+        new(account.Id, account.Email, account.DisplayName, [account.Profile]);
 }

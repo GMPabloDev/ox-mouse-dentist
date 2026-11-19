@@ -13,7 +13,7 @@ builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration, builder.Environment);
 builder.Services.AddValidatorsFromAssemblyContaining<LoginRequestValidator>();
 builder.Services.AddApiDocumentation();
-builder.Services.AddApiRateLimiting();
+builder.Services.AddApiRateLimiting(builder.Configuration);
 
 builder.Services.AddCors(options => options.AddDefaultPolicy(policy =>
 {
@@ -50,6 +50,7 @@ app.MapHealthChecks("/health", new HealthCheckOptions
 
 app.MapApiDocumentation();
 app.MapAuthEndpoints();
+app.MapStaffAccountEndpoints();
 app.MapLocalEndpoints();
 
 app.Run();

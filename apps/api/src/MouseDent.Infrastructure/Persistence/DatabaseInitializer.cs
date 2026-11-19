@@ -55,6 +55,7 @@ public static class DatabaseInitializer
         }
 
         var users = provider.GetRequiredService<UserManager<StaffUser>>();
+        var clock = provider.GetRequiredService<TimeProvider>();
         var email = configuration["Seed:AdminEmail"] ?? "admin@mousedent.local";
         if (await users.FindByEmailAsync(email) is not null)
         {
@@ -67,6 +68,11 @@ public static class DatabaseInitializer
             Email = email,
             EmailConfirmed = true,
             DisplayName = configuration["Seed:AdminDisplayName"] ?? "Administración MouseDent",
+
+            // La cuenta semilla ya tiene contraseña: cuenta como administración disponible.
+            Profile = StaffRole.Admin,
+            IsActive = true,
+            PasswordEstablishedAt = clock.GetUtcNow().UtcDateTime,
         };
 
         var password = configuration["Seed:AdminPassword"] ?? "Admin123!";
@@ -77,6 +83,8 @@ public static class DatabaseInitializer
                 $"No se pudo crear la cuenta semilla: {string.Join("; ", result.Errors.Select(error => error.Description))}");
         }
 
+        // El perfil es la fuente del acceso; el rol se mantiene para conservar el
+        // esquema y los datos de roles de SPEC 01.
         await users.AddToRoleAsync(admin, StaffRole.Admin);
     }
 }

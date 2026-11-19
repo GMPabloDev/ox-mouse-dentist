@@ -45,8 +45,24 @@ public static class DependencyInjection
             .AddEntityFrameworkStores<MouseDentDbContext>()
             .AddSignInManager();
 
-        services.AddScoped<IStaffAccounts, IdentityStaffAccounts>();
+        services.AddScoped<IStaffAccounts, EfStaffAccounts>();
+        services.AddScoped<IStaffAccessLinks, EfStaffAccessLinks>();
         services.AddSingleton<ITokenIssuer, JwtTokenIssuer>();
+
+        // La URL pública del correo y el SMTP se configuran fuera del repositorio.
+        // No se valida al arrancar: la generación de OpenAPI no debe exigir secretos.
+        // La lectura es diferida para que el host de pruebas y los despliegues
+        // apliquen su configuración final.
+        services.AddSingleton(provider =>
+            provider.GetRequiredService<IConfiguration>()
+                .GetSection(StaffAccessOptions.SectionName)
+                .Get<StaffAccessOptions>()
+            ?? new StaffAccessOptions());
+
+        services.AddOptions<SmtpOptions>()
+            .Bind(configuration.GetSection(SmtpOptions.SectionName));
+
+        services.AddScoped<IEmailSender, SmtpEmailSender>();
 
         services.AddOptions<LocalPhotoOptions>()
             .Bind(configuration.GetSection(LocalPhotoOptions.SectionName));
@@ -68,6 +84,11 @@ public static class DependencyInjection
                 var jwt = jwtOptions.Value;
 
                 bearer.MapInboundClaims = false;
+                bearer.Events = new JwtBearerEvents
+                {
+                    // Cada solicitud autenticada compara el token con el estado persistido.
+                    OnTokenValidated = StaffSessionRevalidation.ValidateAsync,
+                };
                 bearer.TokenValidationParameters = new TokenValidationParameters
                 {
                     ValidateIssuer = true,

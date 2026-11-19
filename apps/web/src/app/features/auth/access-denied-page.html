@@ -1,34 +1,85 @@
-<main class="grid min-h-dvh place-items-center bg-background px-4 py-10">
-  <section
-    class="w-full max-w-[460px] rounded-2xl border border-border bg-card px-6 py-8 text-center shadow-sm sm:px-9 sm:py-9"
-  >
-    <div class="flex items-center justify-center gap-2.5 pb-6">
+<main
+  class="min-h-dvh bg-background px-5 py-6 sm:px-12 sm:py-[30px]"
+  style="background-image: radial-gradient(ellipse at 50% 40%, #edf6ed, transparent 60%)"
+>
+  <header class="flex flex-wrap items-center justify-between gap-3">
+    <div class="flex items-center gap-2.5">
       <app-brand-mark class="h-9" />
       <span class="font-display text-xl font-extrabold tracking-tight">
         <span class="text-brand-ink">Mouse</span><span class="text-primary">Dent</span>
+        <small class="block font-sans text-[11px] font-semibold text-muted-foreground">
+          Panel del personal
+        </small>
       </span>
     </div>
-
-    <p class="text-xs font-extrabold tracking-[0.14em] text-muted-foreground uppercase">
-      Acceso restringido
-    </p>
-    <h1 class="mt-3 font-display text-2xl font-extrabold tracking-tight">
-      No puedes gestionar locales
-    </h1>
-    <p class="mt-3 text-sm text-muted-foreground">
-      Solo un administrador autenticado puede consultar o gestionar los locales y sus fotos.
-    </p>
-
-    @if (account(); as user) {
-      <p class="mt-4 text-sm font-semibold">Sesión de {{ user.email }}</p>
-    }
-
     <button
-      class="mt-7 inline-flex h-11 w-full items-center justify-center rounded-xl bg-primary text-sm font-bold text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none"
+      class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-border bg-card px-3.5 text-[13px] font-bold text-foreground transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
       type="button"
       (click)="signOut()"
     >
+      <svg
+        class="hidden size-4 sm:block"
+        aria-hidden="true"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.8"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <path d="M9 4H3v16h6 M10 12h11 M16 7l5 5-5 5" />
+      </svg>
       Cerrar sesión
+    </button>
+  </header>
+
+  <section class="mx-auto mt-[50px] mb-12 max-w-[580px] text-center">
+    <div
+      class="mx-auto mb-6 flex size-[58px] items-center justify-center rounded-[18px] bg-brand-mint-soft text-primary"
+      aria-hidden="true"
+    >
+      <svg
+        class="size-[29px]"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.8"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <path d="M12 22s8-4 8-11V5l-8-3-8 3v6c0 7 8 11 8 11Z M9 12l2 2 4-4" />
+      </svg>
+    </div>
+    <p class="text-[11px] font-extrabold tracking-[1.7px] text-primary uppercase">
+      Acceso restringido
+    </p>
+    <h1
+      class="mt-3 font-display text-[27px] leading-[1.15] font-extrabold tracking-[-0.6px] text-foreground sm:text-[30px]"
+    >
+      No tienes permiso para esta página
+    </h1>
+    <p class="mx-auto mt-3 max-w-[400px] text-sm text-muted-foreground">
+      Tu perfil no permite realizar esta acción. Si necesitas otro acceso, contacta a
+      administración.
+    </p>
+
+    @if (account(); as user) {
+      <p class="mt-4 text-sm font-semibold [overflow-wrap:anywhere]">
+        Sesión de {{ user.email }}
+        @if (profile(); as current) {
+          <span class="block text-xs font-normal text-muted-foreground">
+            Perfil: {{ profileLabel(current) }}
+          </span>
+        }
+      </p>
+    }
+
+    <button
+      class="mt-7 inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-5 text-sm font-bold text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none"
+      type="button"
+      (click)="goHome()"
+    >
+      Ir a mi bienvenida
     </button>
   </section>
 </main>

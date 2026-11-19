@@ -1,6 +1,6 @@
 # SPEC 02 — Acceso del personal por perfil y local
 
-> **Status:** Aprobada **Depends on:** SPEC 01 **Date:** 2026-11-11 **Objective:** Permitir que
+> **Status:** Implementada **Depends on:** SPEC 01 **Date:** 2026-11-11 **Objective:** Permitir que
 > administración gestione las cuentas del personal y el acceso de recepción a sus locales asignados.
 > **Historia de origen:** H-06 en backlogs/backlog-v1-operacion-interna.md
 
@@ -181,43 +181,43 @@ referencia es local y no se recupera desde el repositorio.
 
 ## Criterios de aceptación
 
-- [ ] Solo administración autenticada puede listar, buscar, crear, editar, desactivar y reactivar
+- [x] Solo administración autenticada puede listar, buscar, crear, editar, desactivar y reactivar
       cuentas por la API y la web.
-- [ ] La búsqueda encuentra cuentas por nombre o correo y la lista distingue pendientes, activas e
+- [x] La búsqueda encuentra cuentas por nombre o correo y la lista distingue pendientes, activas e
       inactivas.
-- [ ] Cada cuenta tiene un perfil, correo único, nombre obligatorio y teléfono opcional. La
+- [x] Cada cuenta tiene un perfil, correo único, nombre obligatorio y teléfono opcional. La
       validación impide guardar datos inválidos.
-- [ ] Una cuenta nueva de recepción requiere al menos un local activo. No se puede añadir una
+- [x] Una cuenta nueva de recepción requiere al menos un local activo. No se puede añadir una
       asignación nueva a un local inactivo.
-- [ ] Una cuenta que conserva solo locales inactivos puede iniciar sesión y editarse, pero no
+- [x] Una cuenta que conserva solo locales inactivos puede iniciar sesión y editarse, pero no
       obtiene acceso a esos locales. Reactivar un local restaura el acceso de sus cuentas asignadas.
-- [ ] Administración tiene acceso a todos los locales por su perfil. Un profesional puede recibir
+- [x] Administración tiene acceso a todos los locales por su perfil. Un profesional puede recibir
       una cuenta sin requerir una entidad profesional ni asignación de locales de atención.
-- [ ] Desactivar una cuenta impide acceder en la siguiente solicitud e invalida sus enlaces.
+- [x] Desactivar una cuenta impide acceder en la siguiente solicitud e invalida sus enlaces.
       Reactivarla no restaura sesiones anteriores y conserva la contraseña ya establecida.
-- [ ] Ninguna operación, incluidas las concurrentes, deja el sistema sin un administrador activo que
+- [x] Ninguna operación, incluidas las concurrentes, deja el sistema sin un administrador activo que
       ya haya establecido su contraseña.
-- [ ] El administrador puede invitar al personal y reenviar una invitación pendiente. Si el correo
+- [x] El administrador puede invitar al personal y reenviar una invitación pendiente. Si el correo
       falla, la cuenta se conserva pendiente y el fallo se comunica.
-- [ ] Una invitación permite establecer contraseña una sola vez durante 24 horas. Un enlace nuevo
+- [x] Una invitación permite establecer contraseña una sola vez durante 24 horas. Un enlace nuevo
       invalida los anteriores, también cuando falla el envío nuevo.
-- [ ] Cambiar el correo invalida sesiones y enlaces anteriores, deja la cuenta pendiente y envía una
+- [x] Cambiar el correo invalida sesiones y enlaces anteriores, deja la cuenta pendiente y envía una
       invitación al correo nuevo. El fallo permite reenviarla.
-- [ ] La recuperación no revela si existe la cuenta. El enlace vence a las 24 horas, se usa una vez
+- [x] La recuperación no revela si existe la cuenta. El enlace vence a las 24 horas, se usa una vez
       y al establecer contraseña invalida las sesiones anteriores. Solicitarlo no invalida sesiones.
-- [ ] Los enlaces inválidos, usados y vencidos se rechazan con un mensaje genérico y una orientación
+- [x] Los enlaces inválidos, usados y vencidos se rechazan con un mensaje genérico y una orientación
       sin detalles internos.
-- [ ] El perfil cambiado invalida la sesión en la siguiente solicitud. Los cambios de asignación o
+- [x] El perfil cambiado invalida la sesión en la siguiente solicitud. Los cambios de asignación o
       de estado del local se reflejan en la siguiente solicitud autorizada.
-- [ ] Las pruebas cubren el acceso por perfil y local con solicitudes autorizadas y rechazadas. La
+- [x] Las pruebas cubren el acceso por perfil y local con solicitudes autorizadas y rechazadas. La
       comprobación no depende de implementar H-01.
-- [ ] Recepción y profesionales pueden iniciar sesión y llegar a una bienvenida con su identidad y
+- [x] Recepción y profesionales pueden iniciar sesión y llegar a una bienvenida con su identidad y
       cierre de sesión. No se muestran módulos futuros como disponibles.
-- [ ] Las pantallas siguen la variante de prototipo vinculada a esta spec antes de su aprobación y
+- [x] Las pantallas siguen la variante de prototipo vinculada a esta spec antes de su aprobación y
       contemplan carga, ausencia de resultados y errores recuperables.
-- [ ] El correo real de invitación y recuperación llega a un destinatario autorizado mediante el
+- [x] El correo real de invitación y recuperación llega a un destinatario autorizado mediante el
       SMTP configurado. No hay secretos ni enlaces completos en el repositorio o los registros.
-- [ ] El contrato OpenAPI y el cliente generado están actualizados. `npm test` y `npm run build`
+- [x] El contrato OpenAPI y el cliente generado están actualizados. `npm test` y `npm run build`
       terminan correctamente.
 
 ## Decisiones

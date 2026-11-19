@@ -59,6 +59,34 @@ no actualiza una cuenta existente.
 Con esa cuenta se entra por <http://localhost:4200/acceso> y se llega a la gestión de locales en
 `/locales`. No se crea ningún administrador desde la web.
 
+## Correo e invitaciones
+
+Las invitaciones y los enlaces de recuperación salen por SMTP. La API construye la URL con
+`StaffAccess:PublicBaseUrl`: el enlace apunta a
+`{StaffAccess:PublicBaseUrl}/establecer-contrasena?token=...`, sirve una sola vez y vence a las 24
+horas.
+
+| Variable                     | Uso                                                                     |
+| ---------------------------- | ----------------------------------------------------------------------- |
+| `StaffAccess__PublicBaseUrl` | URL pública de la web, sin barra final. Obligatoria para enviar correo. |
+| `Smtp__Host`                 | Servidor SMTP. Gmail usa `smtp.gmail.com`.                              |
+| `Smtp__Port`                 | Puerto SMTP. Gmail usa 587 con STARTTLS.                                |
+| `Smtp__UserName`             | Cuenta autenticada del remitente.                                       |
+| `Smtp__Password`             | Contraseña de aplicación de esa cuenta.                                 |
+| `Smtp__FromAddress`          | Remitente visible. Gmail exige la misma cuenta o un alias autorizado.   |
+| `Smtp__FromName`             | Nombre visible del remitente. Por defecto `MouseDent`.                  |
+
+`appsettings.Development.json` fija `StaffAccess:PublicBaseUrl` en `http://localhost:4200`. El resto
+de los valores llegan por variables de entorno: el repositorio no guarda credenciales. Gmail exige
+una contraseña de aplicación, no la contraseña de la cuenta.
+
+Si el envío falla, la API responde `502`, la cuenta queda pendiente y administración puede reenviar
+la invitación sin crear otra cuenta. La tabla `StaffAccessLinks` guarda solo el hash del token, así
+que una lectura de la base no permite usar el enlace.
+
+El envío real con el SMTP de evaluación se comprueba a mano en la verificación final de la spec 02;
+las pruebas automatizadas usan un adaptador de correo en memoria.
+
 ## Comandos
 
 | Comando                          | Qué hace                                                        |
@@ -114,6 +142,9 @@ Variables de entorno:
 | `ConnectionStrings__Default` | Cadena de conexión. Por defecto `Data Source=mousedent.db`.        |
 | `API_ORIGIN`                 | Origen absoluto de la API para las peticiones del SSR.             |
 | `NG_ALLOWED_HOSTS`           | Hosts permitidos por el servidor SSR. Separa varios con comas.     |
+
+El correo necesita además `StaffAccess__PublicBaseUrl` y las variables `Smtp__*`; el detalle está en
+[Correo e invitaciones](#correo-e-invitaciones).
 
 Las fotos de los locales se guardan en `Media:PhotosPath` (variable `Media__PhotosPath`). Si no se
 configura, se usa la carpeta de datos locales del usuario que ejecuta la API. Ese almacenamiento

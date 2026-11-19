@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using MouseDent.Domain.Auth;
 using MouseDent.Domain.Locales;
 using MouseDent.Infrastructure.Auth;
 
@@ -14,6 +15,8 @@ public sealed class MouseDentDbContext(DbContextOptions<MouseDentDbContext> opti
     : IdentityDbContext<StaffUser, IdentityRole<Guid>, Guid>(options)
 {
     public DbSet<Local> Locales => Set<Local>();
+
+    public DbSet<StaffAccessLink> StaffAccessLinks => Set<StaffAccessLink>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

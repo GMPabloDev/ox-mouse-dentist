@@ -31,6 +31,29 @@ export type CreateLocalForm = {
   photo?: null | IFormFile;
 };
 
+export type CreateStaffAccountForm = {
+  /**
+   * Nombre visible de la persona.
+   */
+  displayName?: string;
+  /**
+   * Correo que identifica la cuenta. Único entre todas, incluidas las inactivas y pendientes.
+   */
+  email?: string;
+  /**
+   * Teléfono opcional. No se exige un formato concreto.
+   */
+  phone?: null | string;
+  /**
+   * Perfil único: Administrador, Recepcion o Profesional.
+   */
+  profile?: string;
+  /**
+   * Locales asignados. Solo recepción los recibe, y al añadir uno nuevo debe estar activo.
+   */
+  assignedLocalIds?: null | Array<string>;
+};
+
 export type HttpValidationProblemDetails = {
   type?: null | string;
   title?: null | string;
@@ -102,12 +125,61 @@ export type LoginResponse = {
   user: AuthenticatedUser;
 };
 
+export type PasswordRecoveryRequest = {
+  email: string;
+};
+
 export type ProblemDetails = {
   type?: null | string;
   title?: null | string;
   status?: null | number | string;
   detail?: null | string;
   instance?: null | string;
+};
+
+export type ResetPasswordRequest = {
+  token: string;
+  password: string;
+};
+
+export type StaffAccountResponse = {
+  /**
+   * Identificador de la cuenta.
+   */
+  id: string;
+  /**
+   * Nombre visible.
+   */
+  displayName: string;
+  /**
+   * Correo que identifica la cuenta. Único entre todas, incluidas las inactivas.
+   */
+  email: string;
+  /**
+   * Teléfono opcional.
+   */
+  phone: null | string;
+  /**
+   * Perfil único: Administrador, Recepcion o Profesional.
+   */
+  profile: string;
+  /**
+   * Pendiente, Activa o Inactiva.
+   */
+  status: StaffAccountState;
+  /**
+   * Locales asignados. Solo recepción recibe asignaciones.
+   */
+  assignedLocalIds: Array<string>;
+};
+
+export type StaffAccountState = 'Pendiente' | 'Activa' | 'Inactiva';
+
+export type StaffStatusRequest = {
+  /**
+   * true reactiva la cuenta; false la desactiva sin borrar sus datos.
+   */
+  isActive: boolean;
 };
 
 export type UpdateLocalForm = {
@@ -132,6 +204,29 @@ export type UpdateLocalForm = {
    */
   schedule?: string;
   photo?: null | IFormFile;
+};
+
+export type UpdateStaffAccountForm = {
+  /**
+   * Nombre visible de la persona.
+   */
+  displayName?: string;
+  /**
+   * Correo que identifica la cuenta. Único entre todas, incluidas las inactivas y pendientes.
+   */
+  email?: string;
+  /**
+   * Teléfono opcional. No se exige un formato concreto.
+   */
+  phone?: null | string;
+  /**
+   * Perfil único: Administrador, Recepcion o Profesional.
+   */
+  profile?: string;
+  /**
+   * Locales asignados. Solo recepción los recibe, y al añadir uno nuevo debe estar activo.
+   */
+  assignedLocalIds?: null | Array<string>;
 };
 
 export type LoginData = {
@@ -187,6 +282,267 @@ export type GetCurrentUserResponses = {
 };
 
 export type GetCurrentUserResponse = GetCurrentUserResponses[keyof GetCurrentUserResponses];
+
+export type RequestPasswordRecoveryData = {
+  body: PasswordRecoveryRequest;
+  path?: never;
+  query?: never;
+  url: '/api/auth/password-recovery';
+};
+
+export type RequestPasswordRecoveryErrors = {
+  /**
+   * Bad Request
+   */
+  400: HttpValidationProblemDetails;
+  /**
+   * Too Many Requests
+   */
+  429: ProblemDetails;
+};
+
+export type RequestPasswordRecoveryError =
+  RequestPasswordRecoveryErrors[keyof RequestPasswordRecoveryErrors];
+
+export type RequestPasswordRecoveryResponses = {
+  /**
+   * Accepted
+   */
+  202: unknown;
+};
+
+export type ResetPasswordData = {
+  body: ResetPasswordRequest;
+  path?: never;
+  query?: never;
+  url: '/api/auth/password';
+};
+
+export type ResetPasswordErrors = {
+  /**
+   * Bad Request
+   */
+  400: ProblemDetails;
+};
+
+export type ResetPasswordError = ResetPasswordErrors[keyof ResetPasswordErrors];
+
+export type ResetPasswordResponses = {
+  /**
+   * No Content
+   */
+  204: void;
+};
+
+export type ResetPasswordResponse = ResetPasswordResponses[keyof ResetPasswordResponses];
+
+export type ListStaffAccountsData = {
+  body?: never;
+  path?: never;
+  query?: {
+    search?: string;
+  };
+  url: '/api/staff';
+};
+
+export type ListStaffAccountsErrors = {
+  /**
+   * Unauthorized
+   */
+  401: ProblemDetails;
+  /**
+   * Forbidden
+   */
+  403: ProblemDetails;
+};
+
+export type ListStaffAccountsError = ListStaffAccountsErrors[keyof ListStaffAccountsErrors];
+
+export type ListStaffAccountsResponses = {
+  /**
+   * OK
+   */
+  200: Array<StaffAccountResponse>;
+};
+
+export type ListStaffAccountsResponse =
+  ListStaffAccountsResponses[keyof ListStaffAccountsResponses];
+
+export type CreateStaffAccountData = {
+  body: CreateStaffAccountForm;
+  path?: never;
+  query?: never;
+  url: '/api/staff';
+};
+
+export type CreateStaffAccountErrors = {
+  /**
+   * Bad Request
+   */
+  400: HttpValidationProblemDetails;
+  /**
+   * Unauthorized
+   */
+  401: ProblemDetails;
+  /**
+   * Forbidden
+   */
+  403: ProblemDetails;
+  /**
+   * Conflict
+   */
+  409: ProblemDetails;
+  /**
+   * Bad Gateway
+   */
+  502: ProblemDetails;
+};
+
+export type CreateStaffAccountError = CreateStaffAccountErrors[keyof CreateStaffAccountErrors];
+
+export type CreateStaffAccountResponses = {
+  /**
+   * Created
+   */
+  201: StaffAccountResponse;
+};
+
+export type CreateStaffAccountResponse =
+  CreateStaffAccountResponses[keyof CreateStaffAccountResponses];
+
+export type UpdateStaffAccountData = {
+  body: UpdateStaffAccountForm;
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/api/staff/{id}';
+};
+
+export type UpdateStaffAccountErrors = {
+  /**
+   * Bad Request
+   */
+  400: HttpValidationProblemDetails;
+  /**
+   * Unauthorized
+   */
+  401: ProblemDetails;
+  /**
+   * Forbidden
+   */
+  403: ProblemDetails;
+  /**
+   * Not Found
+   */
+  404: ProblemDetails;
+  /**
+   * Conflict
+   */
+  409: ProblemDetails;
+  /**
+   * Bad Gateway
+   */
+  502: ProblemDetails;
+};
+
+export type UpdateStaffAccountError = UpdateStaffAccountErrors[keyof UpdateStaffAccountErrors];
+
+export type UpdateStaffAccountResponses = {
+  /**
+   * OK
+   */
+  200: StaffAccountResponse;
+};
+
+export type UpdateStaffAccountResponse =
+  UpdateStaffAccountResponses[keyof UpdateStaffAccountResponses];
+
+export type SetStaffAccountStatusData = {
+  body: StaffStatusRequest;
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/api/staff/{id}/status';
+};
+
+export type SetStaffAccountStatusErrors = {
+  /**
+   * Unauthorized
+   */
+  401: ProblemDetails;
+  /**
+   * Forbidden
+   */
+  403: ProblemDetails;
+  /**
+   * Not Found
+   */
+  404: ProblemDetails;
+  /**
+   * Conflict
+   */
+  409: ProblemDetails;
+};
+
+export type SetStaffAccountStatusError =
+  SetStaffAccountStatusErrors[keyof SetStaffAccountStatusErrors];
+
+export type SetStaffAccountStatusResponses = {
+  /**
+   * OK
+   */
+  200: StaffAccountResponse;
+};
+
+export type SetStaffAccountStatusResponse =
+  SetStaffAccountStatusResponses[keyof SetStaffAccountStatusResponses];
+
+export type ResendStaffInvitationData = {
+  body?: never;
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/api/staff/{id}/invitation';
+};
+
+export type ResendStaffInvitationErrors = {
+  /**
+   * Unauthorized
+   */
+  401: ProblemDetails;
+  /**
+   * Forbidden
+   */
+  403: ProblemDetails;
+  /**
+   * Not Found
+   */
+  404: ProblemDetails;
+  /**
+   * Conflict
+   */
+  409: ProblemDetails;
+  /**
+   * Bad Gateway
+   */
+  502: ProblemDetails;
+};
+
+export type ResendStaffInvitationError =
+  ResendStaffInvitationErrors[keyof ResendStaffInvitationErrors];
+
+export type ResendStaffInvitationResponses = {
+  /**
+   * OK
+   */
+  200: StaffAccountResponse;
+};
+
+export type ResendStaffInvitationResponse =
+  ResendStaffInvitationResponses[keyof ResendStaffInvitationResponses];
 
 export type ListLocalesData = {
   body?: never;

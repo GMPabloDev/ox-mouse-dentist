@@ -57,7 +57,7 @@
       Administración
     </p>
 
-    <nav aria-label="Navegación principal">
+    <nav class="grid gap-1" aria-label="Navegación principal">
       <a
         class="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold text-sidebar-foreground transition-colors hover:bg-sidebar-accent/70 focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:outline-none"
         routerLink="/locales"
@@ -76,6 +76,28 @@
           <path d="M4 21V5l8-3 8 3v16 M2 21h20 M9 21v-5h6v5 M8 7h1 M15 7h1 M8 11h1 M15 11h1" />
         </svg>
         <span>Locales</span>
+      </a>
+
+      <a
+        class="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold text-sidebar-foreground transition-colors hover:bg-sidebar-accent/70 focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:outline-none"
+        routerLink="/personal"
+        routerLinkActive="bg-sidebar-accent text-sidebar-accent-foreground"
+      >
+        <svg
+          class="size-5 shrink-0"
+          aria-hidden="true"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path
+            d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2 M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8 M22 21v-2a4 4 0 0 0-3-3.87 M16 3.13a4 4 0 0 1 0 7.75"
+          />
+        </svg>
+        <span>Personal</span>
       </a>
     </nav>
 
@@ -142,7 +164,7 @@
       <p class="flex items-center gap-2 text-sm text-muted-foreground">
         <span>Administración</span>
         <span aria-hidden="true">/</span>
-        <b class="font-semibold text-foreground">Locales</b>
+        <b class="font-semibold text-foreground">{{ section() }}</b>
       </p>
 
       @if (account(); as user) {

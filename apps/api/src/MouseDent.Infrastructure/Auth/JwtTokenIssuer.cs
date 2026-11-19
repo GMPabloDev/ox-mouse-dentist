@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Security.Claims;
 using System.Text;
 using Microsoft.Extensions.Options;
@@ -10,6 +11,8 @@ namespace MouseDent.Infrastructure.Auth;
 
 /// <summary>
 /// Emite tokens de acceso JWT para el personal. No hay refresh tokens en el MVP.
+/// El token lleva un único claim <c>role</c> con el perfil vigente; los permisos
+/// por local no viajan en el token y se resuelven en cada solicitud.
 /// </summary>
 public sealed class JwtTokenIssuer(IOptions<JwtOptions> options, TimeProvider timeProvider) : ITokenIssuer
 {
@@ -26,9 +29,10 @@ public sealed class JwtTokenIssuer(IOptions<JwtOptions> options, TimeProvider ti
             new(AuthClaims.Subject, account.Id.ToString()),
             new(AuthClaims.Name, account.DisplayName),
             new(AuthClaims.Email, account.Email),
+            new(AuthClaims.Role, account.Profile),
+            new(AuthClaims.SessionVersion, account.SessionVersion.ToString(CultureInfo.InvariantCulture)),
             new(AuthClaims.TokenId, Guid.CreateVersion7().ToString()),
         };
-        claims.AddRange(account.Roles.Select(role => new Claim(AuthClaims.Role, role)));
 
         var descriptor = new SecurityTokenDescriptor
         {

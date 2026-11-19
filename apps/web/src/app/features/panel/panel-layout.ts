@@ -1,12 +1,14 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { HlmAvatar, HlmAvatarFallback } from '@mousedent/ui/avatar';
-import { type SessionUser, SessionService } from '../../core/auth/session';
+import { filter, map } from 'rxjs';
+import { profileLabel, type SessionUser, SessionService } from '../../core/auth/session';
 import { BrandMark } from '../../core/brand/brand-mark';
 
 /**
- * Contenedor del panel. En este bloque solo existe el destino de locales y el
- * cierre de sesión: el sidebar no anuncia historias que aún no tienen pantalla.
+ * Contenedor del panel de administración. El sidebar solo anuncia los destinos
+ * que ya tienen pantalla: locales y personal.
  */
 @Component({
   selector: 'app-panel-layout',
@@ -22,7 +24,21 @@ export class PanelLayout {
   protected readonly account = this.session.user;
   protected readonly mobileOpen = signal(false);
   protected readonly initials = computed(() => initialsOf(this.account()));
-  protected readonly roleLabel = computed(() => this.account()?.roles.join(' · ') ?? '');
+  protected readonly roleLabel = computed(() => {
+    const profile = this.session.profile();
+
+    return profile ? profileLabel(profile) : '';
+  });
+
+  private readonly url = toSignal(
+    this.router.events.pipe(
+      filter((event): event is NavigationEnd => event instanceof NavigationEnd),
+      map(() => this.router.url),
+    ),
+    { initialValue: this.router.url },
+  );
+
+  protected readonly section = computed(() => currentSection(this.url()));
 
   protected openSidebar(): void {
     this.mobileOpen.set(true);
@@ -36,6 +52,10 @@ export class PanelLayout {
     this.session.logout();
     void this.router.navigateByUrl('/acceso');
   }
+}
+
+function currentSection(url: string): string {
+  return url.startsWith('/personal') ? 'Personal' : 'Locales';
 }
 
 function initialsOf(user: SessionUser | null): string {

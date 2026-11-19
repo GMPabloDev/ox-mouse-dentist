@@ -14,9 +14,13 @@ import { API_BASE_URL, provideApiBaseUrl } from './core/api/api-base-url';
 import { installSessionExpiryInterceptor } from './core/api/session-expiry.interceptor';
 import { AUTH_API } from './core/auth/auth-api';
 import { GeneratedAuthApi } from './core/auth/generated-auth-api';
+import { GeneratedPasswordApi } from './core/auth/generated-password-api';
+import { PASSWORD_API } from './core/auth/password-api';
 import { SessionService } from './core/auth/session';
 import { GeneratedLocalesApi } from './core/locales/generated-locales-api';
 import { LOCALES_API } from './core/locales/locales-api';
+import { GeneratedStaffApi } from './core/staff/generated-staff-api';
+import { STAFF_API } from './core/staff/staff-api';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -29,7 +33,9 @@ export const appConfig: ApplicationConfig = {
     provideApiBaseUrl(),
 
     { provide: AUTH_API, useClass: GeneratedAuthApi },
+    { provide: PASSWORD_API, useClass: GeneratedPasswordApi },
     { provide: LOCALES_API, useClass: GeneratedLocalesApi },
+    { provide: STAFF_API, useClass: GeneratedStaffApi },
 
     provideAppInitializer(() => {
       const browser = isPlatformBrowser(inject(PLATFORM_ID));

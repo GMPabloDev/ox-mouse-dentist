@@ -6,7 +6,7 @@ import {
   type RouterStateSnapshot,
   type UrlTree,
 } from '@angular/router';
-import { requireAdministrator, requireSession } from './auth.guards';
+import { requireAdministrator, requireNonAdministrator, requireSession } from './auth.guards';
 import { SessionService } from './session';
 
 interface GuardSession {
@@ -76,6 +76,26 @@ describe('auth guards', () => {
     const current = session({ active: false, administrator: true });
 
     expect(String(run(requireAdministrator, current))).toBe('/acceso');
+    expect(current.expire).toHaveBeenCalled();
+  });
+
+  it('deja la bienvenida a recepción y profesionales', () => {
+    const current = session({ active: true, administrator: false });
+
+    expect(run(requireNonAdministrator, current)).toBe(true);
+    expect(current.expire).not.toHaveBeenCalled();
+  });
+
+  it('devuelve administración a su panel desde la bienvenida', () => {
+    const current = session({ active: true, administrator: true });
+
+    expect(String(run(requireNonAdministrator, current))).toBe('/locales');
+  });
+
+  it('pide iniciar sesión en la bienvenida cuando no hay sesión vigente', () => {
+    const current = session({ active: false, administrator: false });
+
+    expect(String(run(requireNonAdministrator, current))).toBe('/acceso');
     expect(current.expire).toHaveBeenCalled();
   });
 });

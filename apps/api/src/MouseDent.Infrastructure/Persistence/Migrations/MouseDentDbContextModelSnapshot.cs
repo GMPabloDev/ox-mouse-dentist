@@ -143,6 +143,39 @@ namespace MouseDent.Infrastructure.Persistence.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("MouseDent.Domain.Auth.StaffAccessLink", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("AccountId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("UsedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AccountId");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.ToTable("StaffAccessLinks", (string)null);
+                });
+
             modelBuilder.Entity("MouseDent.Domain.Locales.Local", b =>
                 {
                     b.Property<Guid>("Id")
@@ -192,6 +225,21 @@ namespace MouseDent.Infrastructure.Persistence.Migrations
                     b.ToTable("Locales", (string)null);
                 });
 
+            modelBuilder.Entity("MouseDent.Infrastructure.Auth.StaffLocalAssignment", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("LocalId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("UserId", "LocalId");
+
+                    b.HasIndex("LocalId");
+
+                    b.ToTable("StaffLocalAssignments", (string)null);
+                });
+
             modelBuilder.Entity("MouseDent.Infrastructure.Auth.StaffUser", b =>
                 {
                     b.Property<Guid>("Id")
@@ -217,6 +265,9 @@ namespace MouseDent.Infrastructure.Persistence.Migrations
                     b.Property<bool>("EmailConfirmed")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("INTEGER");
 
@@ -231,6 +282,9 @@ namespace MouseDent.Infrastructure.Persistence.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime?>("PasswordEstablishedAt")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("PasswordHash")
                         .HasColumnType("TEXT");
 
@@ -240,8 +294,16 @@ namespace MouseDent.Infrastructure.Persistence.Migrations
                     b.Property<bool>("PhoneNumberConfirmed")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("Profile")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("TEXT");
+
+                    b.Property<int>("SessionVersion")
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("TwoFactorEnabled")
                         .HasColumnType("INTEGER");
@@ -311,6 +373,37 @@ namespace MouseDent.Infrastructure.Persistence.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("MouseDent.Domain.Auth.StaffAccessLink", b =>
+                {
+                    b.HasOne("MouseDent.Infrastructure.Auth.StaffUser", null)
+                        .WithMany()
+                        .HasForeignKey("AccountId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("MouseDent.Infrastructure.Auth.StaffLocalAssignment", b =>
+                {
+                    b.HasOne("MouseDent.Domain.Locales.Local", null)
+                        .WithMany()
+                        .HasForeignKey("LocalId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("MouseDent.Infrastructure.Auth.StaffUser", "User")
+                        .WithMany("Assignments")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("MouseDent.Infrastructure.Auth.StaffUser", b =>
+                {
+                    b.Navigation("Assignments");
                 });
 #pragma warning restore 612, 618
         }

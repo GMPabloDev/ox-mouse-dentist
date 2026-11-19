@@ -1,6 +1,6 @@
 import type { ComponentFixture } from '@angular/core/testing';
 import { TestBed } from '@angular/core/testing';
-import { Router } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import {
   AUTH_API,
   type AccountCheck,
@@ -33,13 +33,12 @@ function authApi(overrides: Partial<AuthApi> = {}): AuthApi {
 }
 
 function configure(api: AuthApi): { navigate: ReturnType<typeof vi.fn> } {
-  const navigate = vi.fn(async () => true);
   TestBed.configureTestingModule({
-    providers: [
-      { provide: AUTH_API, useValue: api },
-      { provide: Router, useValue: { navigateByUrl: navigate } },
-    ],
+    providers: [provideRouter([]), { provide: AUTH_API, useValue: api }],
   });
+  const navigate = vi
+    .spyOn(TestBed.inject(Router), 'navigateByUrl')
+    .mockResolvedValue(true) as unknown as ReturnType<typeof vi.fn>;
   return { navigate };
 }
 
@@ -158,6 +157,69 @@ describe('LoginPage', () => {
       'Escribe tu correo y tu contraseña.',
     );
     expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it('presenta el mensaje de bienvenida junto al formulario de acceso', async () => {
+    const fixture = await render(authApi());
+    const aside = element<HTMLElement>(fixture, 'aside');
+
+    expect(aside.textContent).toContain('Un buen día empieza con tu equipo.');
+    expect(aside.textContent).toContain('Un espacio para cada persona, con el acceso que necesita.');
+    expect(element<HTMLFormElement>(fixture, 'main section form')).not.toBeNull();
+  });
+
+  it('permite mostrar y ocultar la contraseña sin enviar el formulario', async () => {
+    const api = authApi();
+    const fixture = await render(api);
+    const input = element<HTMLInputElement>(fixture, '#password');
+    input.value = 'Clave123!';
+    input.dispatchEvent(new Event('input'));
+
+    const button = element<HTMLButtonElement>(fixture, 'button[aria-label="Mostrar contraseña"]');
+    expect(input.type).toBe('password');
+    expect(button.getAttribute('aria-pressed')).toBe('false');
+
+    button.click();
+    await flush(fixture);
+    expect(input.type).toBe('text');
+    expect(input.value).toBe('Clave123!');
+    expect(button.getAttribute('aria-label')).toBe('Ocultar contraseña');
+    expect(button.getAttribute('aria-pressed')).toBe('true');
+
+    button.click();
+    await flush(fixture);
+    expect(input.type).toBe('password');
+    expect(input.value).toBe('Clave123!');
+    expect(button.getAttribute('aria-label')).toBe('Mostrar contraseña');
+    expect(api.login).not.toHaveBeenCalled();
+  });
+
+  it('ofrece recuperar el acceso desde la pantalla de acceso', async () => {
+    const fixture = await render(authApi());
+
+    expect(
+      (fixture.nativeElement as HTMLElement).querySelector('a[href="/recuperar-acceso"]'),
+    ).not.toBeNull();
+  });
+
+  it('lleva a recepción y profesionales a su bienvenida', async () => {
+    for (const roles of [['Recepcion'], ['Profesional']]) {
+      const session: SessionRecord = {
+        ...ADMINISTRATOR,
+        user: { ...ADMINISTRATOR.user, id: `usuario-${roles[0]}`, roles },
+      };
+      const { navigate } = configure(
+        authApi({ login: vi.fn(async () => ({ ok: true as const, session })) }),
+      );
+      const fixture = TestBed.createComponent(LoginPage);
+      await flush(fixture);
+
+      await submitCredentials(fixture, 'persona@example.test', 'Demo123!');
+
+      expect(navigate).toHaveBeenCalledWith('/bienvenida');
+      expect(TestBed.inject(SessionService).isAdministrator()).toBe(false);
+      TestBed.resetTestingModule();
+    }
   });
 
   it('recuerda que la sesión anterior caducó', async () => {

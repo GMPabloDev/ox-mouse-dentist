@@ -1,8 +1,8 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import type { LoginAttempt } from '../../core/auth/auth-api';
-import { SessionService } from '../../core/auth/session';
-import { BrandMark } from '../../core/brand/brand-mark';
+import { homePathFor, SessionService } from '../../core/auth/session';
+import { PublicShell } from './public-shell';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -11,7 +11,7 @@ const CREDENTIALS_MESSAGE = 'El correo o la contraseña no son correctos.';
 
 @Component({
   selector: 'app-login-page',
-  imports: [BrandMark],
+  imports: [RouterLink, PublicShell],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './login-page.html',
 })
@@ -21,6 +21,7 @@ export class LoginPage {
 
   protected readonly email = signal('');
   protected readonly password = signal('');
+  protected readonly showPassword = signal(false);
   protected readonly submitting = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly endNotice = this.session.endNotice;
@@ -31,6 +32,10 @@ export class LoginPage {
 
   protected onPasswordInput(event: Event): void {
     this.password.set((event.target as HTMLInputElement).value);
+  }
+
+  protected togglePassword(): void {
+    this.showPassword.update((visible) => !visible);
   }
 
   protected async submit(event: Event): Promise<void> {
@@ -64,7 +69,7 @@ export class LoginPage {
         return;
       }
 
-      await this.router.navigateByUrl('/locales');
+      await this.router.navigateByUrl(homePathFor(this.session.isAdministrator()));
     } finally {
       this.submitting.set(false);
     }

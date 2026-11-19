@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
-import { client, getCurrentUser } from '@mousedent/api-client';
+import { client, getCurrentUser, listStaffAccounts } from '@mousedent/api-client';
 import { AUTH_API, type AccountCheck, type AuthApi, type LoginAttempt } from '../auth/auth-api';
 import { SESSION_EXPIRED_MESSAGE, SessionService, type SessionRecord } from '../auth/session';
 import {
@@ -122,6 +122,39 @@ describe('session expiry interceptor', () => {
       expect(session.accessToken()).toBe('token-nuevo');
       expect(session.endNotice()).toBeNull();
       expect(navigate).not.toHaveBeenCalled();
+    } finally {
+      client.interceptors.error.eject(interceptorId);
+      client.setConfig(previousConfig);
+    }
+  });
+
+  it('cierra la sesión cuando una petición de personal recibe 401', async () => {
+    const session = TestBed.inject(SessionService);
+    await session.login('admin@mousedent.local', 'Admin123!');
+    const router = TestBed.inject(Router);
+    const navigate = vi.spyOn(router, 'navigateByUrl').mockResolvedValue(true);
+
+    const previousConfig = client.getConfig();
+    client.setConfig({
+      baseUrl: 'http://localhost:5080',
+      fetch: async () =>
+        new Response(JSON.stringify({ detail: 'No autorizado' }), {
+          status: 401,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+    });
+
+    const interceptorId = TestBed.runInInjectionContext(() => installSessionExpiryInterceptor());
+
+    try {
+      const result = await listStaffAccounts({
+        headers: { Authorization: 'Bearer token-administrador' },
+      });
+
+      expect(result.response?.status).toBe(401);
+      expect(session.hasSession()).toBe(false);
+      expect(session.endNotice()).toBe(SESSION_EXPIRED_MESSAGE);
+      expect(navigate).toHaveBeenCalledWith('/acceso');
     } finally {
       client.interceptors.error.eject(interceptorId);
       client.setConfig(previousConfig);

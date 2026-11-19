@@ -178,6 +178,14 @@ materializa. `LoginRequestValidator` agrega las reglas y `ValidationFilter<T>` d
 `ValidationProblemDetails`. FluentValidation valida un tipo ya construido; no infiere tipos ni
 convierte datos.
 
+**Invitaciones y recuperación con enlaces de un solo uso.** `StaffAccessLinks` guarda el SHA-256 del
+token, nunca el token, así que una lectura de la base no permite construir el enlace. Emitir un
+enlace borra los pendientes de la cuenta antes de enviar el correo: un reenvío fallido tampoco deja
+válido el enlace anterior. El consumo comprueba vigencia y uso, aplica la política de contraseña de
+Identity y sube `SessionVersion` en una transacción; una actualización condicional impide que dos
+solicitudes simultáneas consuman el mismo enlace. El correo sale por SMTP con `SmtpClient` de la
+biblioteca base, detrás del puerto `IEmailSender` de Application.
+
 **Tipos compartidos con la web.** El contrato OpenAPI genera los tipos de la web. El cuerpo de error
 es `ProblemDetails`. La lógica de fechas y solapes pertenece a Domain cuando llegue la agenda.
 

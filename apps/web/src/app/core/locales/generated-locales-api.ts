@@ -6,12 +6,13 @@ import {
   setLocalStatus,
   updateLocal,
   type CreateLocalForm,
-  type HttpValidationProblemDetails,
   type LocalResponse,
-  type ProblemDetails,
   type UpdateLocalForm,
 } from '@mousedent/api-client';
+import { problemDetail, validationErrors } from '../api/problem-details';
 import type { LocalesApi, LocalesFailure, LocalesResult } from './locales-api';
+
+export { validationErrors };
 
 /**
  * Adaptador del cliente OpenAPI generado. Traduce cada respuesta a un resultado
@@ -89,34 +90,6 @@ export function classifyWriteFailure(status: number | undefined, error: unknown)
     default:
       return { kind: 'unavailable' };
   }
-}
-
-/** Errores por campo de un `ValidationProblemDetails`, sin perder los mensajes. */
-export function validationErrors(error: unknown): Readonly<Record<string, readonly string[]>> {
-  if (typeof error !== 'object' || error === null) {
-    return {};
-  }
-
-  const errors = (error as HttpValidationProblemDetails).errors;
-  if (typeof errors !== 'object' || errors === null) {
-    return {};
-  }
-
-  return Object.fromEntries(
-    Object.entries(errors).map(([field, messages]) => [
-      field,
-      Array.isArray(messages) ? messages.filter((message) => typeof message === 'string') : [],
-    ]),
-  );
-}
-
-function problemDetail(error: unknown): string | undefined {
-  if (typeof error !== 'object' || error === null) {
-    return undefined;
-  }
-
-  const detail = (error as ProblemDetails).detail;
-  return typeof detail === 'string' && detail.trim() ? detail : undefined;
 }
 
 function succeed<T>(value: T): LocalesResult<T> {

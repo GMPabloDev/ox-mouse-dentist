@@ -13,6 +13,9 @@ import type {
   CreateLocalData,
   CreateLocalErrors,
   CreateLocalResponses,
+  CreateStaffAccountData,
+  CreateStaffAccountErrors,
+  CreateStaffAccountResponses,
   GetCurrentUserData,
   GetCurrentUserErrors,
   GetCurrentUserResponses,
@@ -22,15 +25,33 @@ import type {
   ListLocalesData,
   ListLocalesErrors,
   ListLocalesResponses,
+  ListStaffAccountsData,
+  ListStaffAccountsErrors,
+  ListStaffAccountsResponses,
   LoginData,
   LoginErrors,
   LoginResponses,
+  RequestPasswordRecoveryData,
+  RequestPasswordRecoveryErrors,
+  RequestPasswordRecoveryResponses,
+  ResendStaffInvitationData,
+  ResendStaffInvitationErrors,
+  ResendStaffInvitationResponses,
+  ResetPasswordData,
+  ResetPasswordErrors,
+  ResetPasswordResponses,
   SetLocalStatusData,
   SetLocalStatusErrors,
   SetLocalStatusResponses,
+  SetStaffAccountStatusData,
+  SetStaffAccountStatusErrors,
+  SetStaffAccountStatusResponses,
   UpdateLocalData,
   UpdateLocalErrors,
   UpdateLocalResponses,
+  UpdateStaffAccountData,
+  UpdateStaffAccountErrors,
+  UpdateStaffAccountResponses,
 } from './types.gen';
 
 export type Options<
@@ -75,6 +96,132 @@ export const getCurrentUser = <ThrowOnError extends boolean = false>(
   (options?.client ?? client).get<GetCurrentUserResponses, GetCurrentUserErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/auth/me',
+    ...options,
+  });
+
+/**
+ * Solicita un enlace de recuperación sin confirmar si la cuenta existe.
+ */
+export const requestPasswordRecovery = <ThrowOnError extends boolean = false>(
+  options: Options<RequestPasswordRecoveryData, ThrowOnError>,
+): RequestResult<RequestPasswordRecoveryResponses, RequestPasswordRecoveryErrors, ThrowOnError> =>
+  (options.client ?? client).post<
+    RequestPasswordRecoveryResponses,
+    RequestPasswordRecoveryErrors,
+    ThrowOnError
+  >({
+    url: '/api/auth/password-recovery',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Establece la contraseña con un enlace de invitación o recuperación.
+ */
+export const resetPassword = <ThrowOnError extends boolean = false>(
+  options: Options<ResetPasswordData, ThrowOnError>,
+): RequestResult<ResetPasswordResponses, ResetPasswordErrors, ThrowOnError> =>
+  (options.client ?? client).post<ResetPasswordResponses, ResetPasswordErrors, ThrowOnError>({
+    url: '/api/auth/password',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Lista las cuentas del personal, incluidas las pendientes y las inactivas.
+ */
+export const listStaffAccounts = <ThrowOnError extends boolean = false>(
+  options?: Options<ListStaffAccountsData, ThrowOnError>,
+): RequestResult<ListStaffAccountsResponses, ListStaffAccountsErrors, ThrowOnError> =>
+  (options?.client ?? client).get<
+    ListStaffAccountsResponses,
+    ListStaffAccountsErrors,
+    ThrowOnError
+  >({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/staff',
+    ...options,
+  });
+
+/**
+ * Crea una cuenta pendiente y la asigna a sus locales si es recepción.
+ */
+export const createStaffAccount = <ThrowOnError extends boolean = false>(
+  options: Options<CreateStaffAccountData, ThrowOnError>,
+): RequestResult<CreateStaffAccountResponses, CreateStaffAccountErrors, ThrowOnError> =>
+  (options.client ?? client).post<
+    CreateStaffAccountResponses,
+    CreateStaffAccountErrors,
+    ThrowOnError
+  >({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/staff',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Edita el nombre, el correo, el teléfono, el perfil y los locales de una cuenta.
+ */
+export const updateStaffAccount = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateStaffAccountData, ThrowOnError>,
+): RequestResult<UpdateStaffAccountResponses, UpdateStaffAccountErrors, ThrowOnError> =>
+  (options.client ?? client).put<
+    UpdateStaffAccountResponses,
+    UpdateStaffAccountErrors,
+    ThrowOnError
+  >({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/staff/{id}',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Activa o desactiva una cuenta sin exigir el resto de sus datos.
+ */
+export const setStaffAccountStatus = <ThrowOnError extends boolean = false>(
+  options: Options<SetStaffAccountStatusData, ThrowOnError>,
+): RequestResult<SetStaffAccountStatusResponses, SetStaffAccountStatusErrors, ThrowOnError> =>
+  (options.client ?? client).patch<
+    SetStaffAccountStatusResponses,
+    SetStaffAccountStatusErrors,
+    ThrowOnError
+  >({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/staff/{id}/status',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Emite una invitación nueva para una cuenta pendiente e invalida la anterior.
+ */
+export const resendStaffInvitation = <ThrowOnError extends boolean = false>(
+  options: Options<ResendStaffInvitationData, ThrowOnError>,
+): RequestResult<ResendStaffInvitationResponses, ResendStaffInvitationErrors, ThrowOnError> =>
+  (options.client ?? client).post<
+    ResendStaffInvitationResponses,
+    ResendStaffInvitationErrors,
+    ThrowOnError
+  >({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/staff/{id}/invitation',
     ...options,
   });
 

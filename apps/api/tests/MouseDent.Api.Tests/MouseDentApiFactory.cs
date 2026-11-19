@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using MouseDent.Application.Auth;
 using MouseDent.Domain.Auth;
 using MouseDent.Infrastructure.Auth;
 using MouseDent.Infrastructure.Persistence;
@@ -15,22 +16,42 @@ using MouseDent.Infrastructure.Persistence;
 namespace MouseDent.Api.Tests;
 
 /// <summary>
-/// Arranca la API en memoria con una base SQLite y una carpeta de fotos propias
-/// por instancia. Reutiliza el sembrado de Development para probar el acceso del
-/// personal y agrega una cuenta con otro perfil para las pruebas de autorización.
+/// Arranca la API con una carpeta de fotos propia por instancia. Reutiliza el
+/// sembrado de Development para probar el acceso del personal y agrega cuentas
+/// con otros perfiles para las pruebas de autorización.
 /// </summary>
-public sealed class MouseDentApiFactory : WebApplicationFactory<Program>
+public abstract class MouseDentApiFactoryBase : WebApplicationFactory<Program>
 {
     public const string AdminEmail = "admin@mousedent.local";
     public const string AdminPassword = "Admin123!";
     public const string ReceptionEmail = "recepcion@mousedent.local";
     public const string ReceptionPassword = "Recepcion123!";
 
-    private readonly SqliteConnection _connection = new("Data Source=:memory:");
+    /// <summary>URL pública de la web con la que se construyen los enlaces del correo.</summary>
+    public const string PublicBaseUrl = "https://panel.mousedent.test";
+
+    private readonly SqliteConnection? _connection;
+    private readonly string? _databasePath;
     private readonly ConcurrentDictionary<string, Lazy<Task<string>>> _tokens = new();
 
-    public MouseDentApiFactory()
+    /// <param name="useFileDatabase">
+    /// Con <c>true</c> la base vive en un archivo temporal y cada solicitud abre su
+    /// propia conexión, de modo que se pueden comprobar escrituras concurrentes.
+    /// Con <c>false</c> una única conexión en memoria comparte la base con el host.
+    /// </param>
+    protected MouseDentApiFactoryBase(bool useFileDatabase)
     {
+        if (useFileDatabase)
+        {
+            _databasePath = Path.Combine(
+                Path.GetTempPath(),
+                "mousedent-tests",
+                $"{Guid.NewGuid():N}.db");
+            Directory.CreateDirectory(Path.GetDirectoryName(_databasePath)!);
+            return;
+        }
+
+        _connection = new SqliteConnection("Data Source=:memory:");
         _connection.Open();
     }
 
@@ -46,55 +67,106 @@ public sealed class MouseDentApiFactory : WebApplicationFactory<Program>
 
         builder.ConfigureAppConfiguration((_, configuration) =>
         {
-            configuration.AddInMemoryCollection(new Dictionary<string, string?>
+            var values = new Dictionary<string, string?>
             {
                 ["Seed:Enabled"] = "true",
                 ["Seed:AdminEmail"] = AdminEmail,
                 ["Seed:AdminPassword"] = AdminPassword,
                 ["Media:PhotosPath"] = PhotosPath,
-            });
+                ["StaffAccess:PublicBaseUrl"] = PublicBaseUrl,
+
+                // Las pruebas no compiten por los limitadores: el límite configurado se
+                // comprueba en una fábrica propia con un valor bajo.
+                ["RateLimits:LoginPermitLimit"] = "1000",
+                ["RateLimits:PasswordRecoveryPermitLimit"] = "1000",
+            };
+
+            ConfigureTestSettings(values);
+            configuration.AddInMemoryCollection(values);
         });
 
         builder.ConfigureServices(services =>
         {
             services.RemoveAll<DbContextOptions<MouseDentDbContext>>();
             services.RemoveAll<MouseDentDbContext>();
-            services.AddDbContext<MouseDentDbContext>(options => options.UseSqlite(_connection));
+
+            if (_connection is not null)
+            {
+                services.AddDbContext<MouseDentDbContext>(options => options.UseSqlite(_connection));
+            }
+            else
+            {
+                // Cada contexto abre su propia conexión al archivo temporal, así dos
+                // solicitudes concurrentes escriben en conexiones distintas.
+                services.AddDbContext<MouseDentDbContext>(options =>
+                    options.UseSqlite($"Data Source={_databasePath}"));
+            }
+
+            // El correo se registra en memoria: ninguna prueba habla con un servidor real.
+            services.RemoveAll<IEmailSender>();
+            services.AddSingleton<RecordingEmailSender>();
+            services.AddSingleton<IEmailSender>(provider =>
+                provider.GetRequiredService<RecordingEmailSender>());
+
+            ConfigureTestServices(services);
         });
     }
 
+    /// <summary>Correos que la API habría enviado en esta instancia.</summary>
+    internal RecordingEmailSender Emails => Services.GetRequiredService<RecordingEmailSender>();
+
+    /// <summary>Ajustes de configuración propios de una prueba concreta.</summary>
+    protected virtual void ConfigureTestSettings(Dictionary<string, string?> settings)
+    {
+    }
+
+    /// <summary>Reemplazos de servicios propios de una prueba concreta.</summary>
+    protected virtual void ConfigureTestServices(IServiceCollection services)
+    {
+    }
+
     /// <summary>Crea la cuenta con perfil <c>Recepcion</c> que usan las pruebas de autorización.</summary>
-    public async Task SeedReceptionAccountAsync()
+    public async Task SeedReceptionAccountAsync() =>
+        await SeedAccountAsync(ReceptionEmail, ReceptionPassword, StaffRole.Reception);
+
+    /// <summary>
+    /// Crea una cuenta con contraseña establecida, como si la persona ya hubiera
+    /// aceptado su invitación. Devuelve su identificador.
+    /// </summary>
+    public async Task<Guid> SeedAccountAsync(
+        string email,
+        string password,
+        string profile,
+        bool isActive = true)
     {
         using var scope = Services.CreateScope();
         var users = scope.ServiceProvider.GetRequiredService<UserManager<StaffUser>>();
 
-        if (await users.FindByEmailAsync(ReceptionEmail) is not null)
+        var existing = await users.FindByEmailAsync(email);
+        if (existing is not null)
         {
-            return;
+            return existing.Id;
         }
 
         var account = new StaffUser
         {
-            UserName = ReceptionEmail,
-            Email = ReceptionEmail,
+            UserName = email,
+            Email = email,
             EmailConfirmed = true,
-            DisplayName = "Recepción de pruebas",
+            DisplayName = $"{profile} de pruebas",
+            Profile = profile,
+            IsActive = isActive,
+            PasswordEstablishedAt = scope.ServiceProvider.GetRequiredService<TimeProvider>().GetUtcNow().UtcDateTime,
         };
 
-        var created = await users.CreateAsync(account, ReceptionPassword);
+        var created = await users.CreateAsync(account, password);
         if (!created.Succeeded)
         {
             throw new InvalidOperationException(
                 $"No se pudo crear la cuenta de pruebas: {string.Join("; ", created.Errors.Select(error => error.Description))}");
         }
 
-        var role = await users.AddToRoleAsync(account, StaffRole.Reception);
-        if (!role.Succeeded)
-        {
-            throw new InvalidOperationException(
-                $"No se pudo asignar el perfil de pruebas: {string.Join("; ", role.Errors.Select(error => error.Description))}");
-        }
+        return account.Id;
     }
 
     /// <summary>
@@ -105,6 +177,9 @@ public sealed class MouseDentApiFactory : WebApplicationFactory<Program>
         _tokens.GetOrAdd(
             email,
             _ => new Lazy<Task<string>>(() => RequestTokenAsync(email, password))).Value;
+
+    /// <summary>Token nuevo, sin reutilizar el de <see cref="AccessTokenAsync"/>.</summary>
+    public Task<string> LoginAsync(string email, string password) => RequestTokenAsync(email, password);
 
     /// <summary>Fotos publicadas en la carpeta de esta instancia.</summary>
     public IReadOnlyList<string> PublishedPhotoFiles() =>
@@ -120,6 +195,36 @@ public sealed class MouseDentApiFactory : WebApplicationFactory<Program>
         return Directory.Exists(pending)
             ? [.. Directory.GetFiles(pending).Select(Path.GetFileName).OfType<string>().Order()]
             : [];
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        base.Dispose(disposing);
+
+        if (!disposing)
+        {
+            return;
+        }
+
+        _connection?.Dispose();
+
+        if (_databasePath is not null)
+        {
+            SqliteConnection.ClearAllPools();
+
+            foreach (var path in new[] { _databasePath, $"{_databasePath}-wal", $"{_databasePath}-shm" })
+            {
+                if (File.Exists(path))
+                {
+                    File.Delete(path);
+                }
+            }
+        }
+
+        if (Directory.Exists(PhotosPath))
+        {
+            Directory.Delete(PhotosPath, recursive: true);
+        }
     }
 
     private async Task<string> RequestTokenAsync(string email, string password)
@@ -140,19 +245,43 @@ public sealed class MouseDentApiFactory : WebApplicationFactory<Program>
     }
 
     private sealed record TokenPayload(string AccessToken);
+}
 
-    protected override void Dispose(bool disposing)
+/// <summary>API con una base SQLite en memoria compartida por todo el host.</summary>
+public sealed class MouseDentApiFactory() : MouseDentApiFactoryBase(useFileDatabase: false);
+
+/// <summary>
+/// API con una base SQLite en archivo, para pruebas que necesitan conexiones
+/// independientes y escrituras concurrentes.
+/// </summary>
+public sealed class MouseDentApiFileDatabaseFactory() : MouseDentApiFactoryBase(useFileDatabase: true);
+
+/// <summary>
+/// API con el reloj bajo control de la prueba, para comprobar la vigencia de los
+/// enlaces sin tocar la base.
+/// </summary>
+public sealed class MouseDentApiClockFactory() : MouseDentApiFactoryBase(useFileDatabase: false)
+{
+    internal TestClock Clock { get; } = new(DateTimeOffset.UtcNow);
+
+    protected override void ConfigureTestServices(IServiceCollection services)
     {
-        base.Dispose(disposing);
+        services.RemoveAll<TimeProvider>();
+        services.AddSingleton<TimeProvider>(Clock);
+    }
+}
 
-        if (disposing)
-        {
-            _connection.Dispose();
+/// <summary>
+/// API con el límite de recuperación bajo (tres solicitudes por ventana) para
+/// comprobar el límite configurado sin agotar el de las demás pruebas.
+/// </summary>
+public sealed class MouseDentApiRecoveryLimitFactory() : MouseDentApiFactoryBase(useFileDatabase: false)
+{
+    public const int RecoveryPermitLimit = 3;
 
-            if (Directory.Exists(PhotosPath))
-            {
-                Directory.Delete(PhotosPath, recursive: true);
-            }
-        }
+    protected override void ConfigureTestSettings(Dictionary<string, string?> settings)
+    {
+        settings["RateLimits:PasswordRecoveryPermitLimit"] = RecoveryPermitLimit.ToString();
+        settings["RateLimits:WindowSeconds"] = "600";
     }
 }

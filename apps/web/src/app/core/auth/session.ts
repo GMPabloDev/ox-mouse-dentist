@@ -5,6 +5,25 @@ import { SessionStore } from './session-storage';
 /** Perfil con acceso a la gestión de locales. */
 export const ADMINISTRATOR_ROLE = 'Administrador';
 
+/** Etiqueta visible del perfil único. Los nombres del contrato no llevan tildes. */
+const PROFILE_LABELS: Readonly<Record<string, string>> = {
+  Administrador: 'Administración',
+  Recepcion: 'Recepción',
+  Profesional: 'Profesional',
+};
+
+export function profileLabel(profile: string): string {
+  return PROFILE_LABELS[profile] ?? profile;
+}
+
+/**
+ * Ruta inicial después de iniciar sesión. Administración conserva la gestión de
+ * locales; recepción y profesionales solo tienen su bienvenida.
+ */
+export function homePathFor(isAdministrator: boolean): string {
+  return isAdministrator ? '/locales' : '/bienvenida';
+}
+
 /** Aviso que ve el administrador cuando la API ya no reconoce su sesión. */
 export const SESSION_EXPIRED_MESSAGE = 'Tu sesión caducó. Vuelve a iniciar sesión.';
 
@@ -35,6 +54,8 @@ export class SessionService {
   private readonly notice = signal<string | null>(null);
 
   readonly user = computed(() => this.current()?.user ?? null);
+  /** Perfil único de la cuenta tal como lo emitió la API. */
+  readonly profile = computed(() => this.user()?.roles[0] ?? null);
   readonly isAdministrator = computed(
     () => this.user()?.roles.includes(ADMINISTRATOR_ROLE) ?? false,
   );

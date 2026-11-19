@@ -11,4 +11,7 @@ public static class AuthClaims
     public const string Email = "email";
     public const string Role = "role";
     public const string TokenId = "jti";
+
+    /// <summary>Versión de la sesión de la cuenta al emitir el token.</summary>
+    public const string SessionVersion = "session";
 }

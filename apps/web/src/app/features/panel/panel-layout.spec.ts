@@ -67,13 +67,15 @@ describe('PanelLayout', () => {
     localStorage.clear();
   });
 
-  it('muestra la cuenta autenticada y solo el destino de locales', async () => {
+  it('muestra la cuenta autenticada y solo los destinos con pantalla', async () => {
     const { fixture } = await renderPanel();
     const host = fixture.nativeElement as HTMLElement;
 
     expect(host.textContent).toContain('Administrador');
     expect(host.querySelector('a[href="/locales"]')).not.toBeNull();
-    expect(host.querySelectorAll('nav a').length).toBe(1);
+    expect(host.querySelector('a[href="/personal"]')).not.toBeNull();
+    expect(host.querySelectorAll('nav a').length).toBe(2);
+    expect(host.textContent).toContain('Administración');
   });
 
   it('cierra la sesión y vuelve al acceso', async () => {
