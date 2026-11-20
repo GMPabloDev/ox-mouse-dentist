@@ -52,10 +52,10 @@ Ambos backlogs forman parte del MVP inicial. La versión de un backlog no equiva
 
 | Backlog | IDs asignados | Estado |
 | --- | --- | --- |
-| v1: Operación interna | H-01 a H-09 | Aprobados |
+| v1: Operación interna | H-01 a H-09, H-14 | Aprobados |
 | v2: Reserva pública y recordatorios | H-10 a H-13 | Aprobados |
 
-El siguiente ID disponible es H-14. Los IDs se conservan al reordenar historias y no se reutilizan al retirarlas o sustituirlas. Las historias sustituidas se conservan como registro y sus IDs se anotan como retirados en el backlog correspondiente. Actualmente no hay IDs retirados.
+El siguiente ID disponible es H-15. Los IDs se conservan al reordenar historias y no se reutilizan al retirarlas o sustituirlas. Las historias sustituidas se conservan como registro y sus IDs se anotan como retirados en el backlog correspondiente. Actualmente no hay IDs retirados.
 
 Las referencias `Requires:` solo apuntan a historias del mismo backlog. La relación entre v1 y v2 se expresa en sus contextos.
 
