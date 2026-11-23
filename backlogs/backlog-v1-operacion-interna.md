@@ -10,14 +10,14 @@ Decisiones costosas: una sola empresa con múltiples locales; ficha básica úni
 
 La evaluación será controlada con el equipo y pacientes ficticios, según el [contexto compartido](README.md).
 
-El equipo técnico prepara la primera cuenta de administrador. La primera historia incluye el acceso necesario para que el administrador gestione los locales. Después, el administrador gestiona el acceso del personal por perfil y local antes de que recepción registre y consulte citas. Los datos necesarios para las citas que no estén cubiertos por historias anteriores se definen en la spec de H-01.
+El equipo técnico prepara la primera cuenta de administrador. La primera historia incluye el acceso necesario para que el administrador gestione los locales. Después, el administrador gestiona el acceso del personal por perfil y local antes de que recepción registre y consulte citas. Los datos necesarios para las citas que no estén cubiertos por historias anteriores se definen en la spec de H-01. Las especialidades de cada profesional forman parte de H-03, porque la agenda pública del v2 necesita filtrar por ellas.
 
 ## Backlog
 
 - **H-02** Como administrador, quiero gestionar los locales de MouseDent, para mantener organizada la atención en las sedes actuales y las nuevas.
 - **H-06** Como administrador, quiero gestionar el acceso del personal por perfil y local, para que cada trabajador opere dentro de sus responsabilidades. Requires: H-02
 - **H-04** Como administrador, quiero gestionar las especialidades, servicios y tratamientos de MouseDent, para mantener actualizada la oferta de atención.
-- **H-03** Como administrador, quiero gestionar los profesionales y sus locales de atención, para mantener actualizado el equipo disponible.
+- **H-03** Como administrador, quiero gestionar los profesionales, sus especialidades y sus locales de atención, para mantener actualizado el equipo disponible.
 - **H-05** Como administrador, quiero definir la disponibilidad de los profesionales por local, para ofrecer horarios que puedan atender. Requires: H-03
 - **H-14** Como recepcionista, quiero registrar la ficha básica única de un paciente y su responsable cuando sea menor, para identificarlo al atenderlo en los locales de MouseDent. Requires: H-06
 - **H-07** Como recepcionista, quiero consultar y actualizar la ficha básica única del paciente y su responsable cuando sea menor, para mantener sus datos al atenderlo en distintos locales. Requires: H-14
