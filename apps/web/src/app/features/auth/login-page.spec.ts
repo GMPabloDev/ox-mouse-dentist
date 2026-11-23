@@ -202,7 +202,7 @@ describe('LoginPage', () => {
     ).not.toBeNull();
   });
 
-  it('lleva a recepción y profesionales a su bienvenida', async () => {
+  it('lleva a recepción y profesionales al catálogo', async () => {
     for (const roles of [['Recepcion'], ['Profesional']]) {
       const session: SessionRecord = {
         ...ADMINISTRATOR,
@@ -216,7 +216,7 @@ describe('LoginPage', () => {
 
       await submitCredentials(fixture, 'persona@example.test', 'Demo123!');
 
-      expect(navigate).toHaveBeenCalledWith('/bienvenida');
+      expect(navigate).toHaveBeenCalledWith('/catalogo');
       expect(TestBed.inject(SessionService).isAdministrator()).toBe(false);
       TestBed.resetTestingModule();
     }

@@ -17,6 +17,8 @@ import { GeneratedAuthApi } from './core/auth/generated-auth-api';
 import { GeneratedPasswordApi } from './core/auth/generated-password-api';
 import { PASSWORD_API } from './core/auth/password-api';
 import { SessionService } from './core/auth/session';
+import { GeneratedCatalogoApi } from './core/catalogo/generated-catalogo-api';
+import { CATALOGO_API } from './core/catalogo/catalogo-api';
 import { GeneratedLocalesApi } from './core/locales/generated-locales-api';
 import { LOCALES_API } from './core/locales/locales-api';
 import { GeneratedStaffApi } from './core/staff/generated-staff-api';
@@ -35,6 +37,7 @@ export const appConfig: ApplicationConfig = {
     { provide: AUTH_API, useClass: GeneratedAuthApi },
     { provide: PASSWORD_API, useClass: GeneratedPasswordApi },
     { provide: LOCALES_API, useClass: GeneratedLocalesApi },
+    { provide: CATALOGO_API, useClass: GeneratedCatalogoApi },
     { provide: STAFF_API, useClass: GeneratedStaffApi },
 
     provideAppInitializer(() => {

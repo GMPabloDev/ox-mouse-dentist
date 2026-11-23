@@ -9,7 +9,7 @@ import { homePathFor, SessionService } from './core/auth/session';
 
 /**
  * Destino inicial del panel según el perfil. Administración conserva locales;
- * recepción y profesionales solo tienen su bienvenida.
+ * recepción y profesionales entran al catálogo.
  */
 export function homeRedirect(): string {
   return homePathFor(inject(SessionService).isAdministrator());
@@ -55,6 +55,12 @@ export const routes: Routes = [
     canActivate: [requireSession],
     loadComponent: () => import('./features/panel/panel-layout').then((m) => m.PanelLayout),
     children: [
+      {
+        path: 'catalogo',
+        title: 'Catálogo · MouseDent',
+        loadComponent: () =>
+          import('./features/catalogo/catalogo-page').then((m) => m.CatalogoPage),
+      },
       {
         path: 'personal',
         title: 'Personal · MouseDent',

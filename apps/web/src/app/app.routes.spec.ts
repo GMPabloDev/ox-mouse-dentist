@@ -34,7 +34,7 @@ describe('rutas por perfil', () => {
     TestBed.resetTestingModule();
   });
 
-  it('lleva a administración a locales y al resto a su bienvenida', () => {
+  it('lleva a administración a locales y al resto al catálogo', () => {
     const session = { isAdministrator: () => true };
     TestBed.configureTestingModule({
       providers: [{ provide: SessionService, useValue: session }],
@@ -47,12 +47,14 @@ describe('rutas por perfil', () => {
       providers: [{ provide: SessionService, useValue: { isAdministrator: () => false } }],
     });
 
-    expect(TestBed.runInInjectionContext(homeRedirect)).toBe('/bienvenida');
+    expect(TestBed.runInInjectionContext(homeRedirect)).toBe('/catalogo');
   });
 
-  it('reserva personal y locales a administración', () => {
+  it('reserva personal y locales a administración y deja el catálogo al equipo', () => {
     expect(child('personal').canActivate).toEqual([requireAdministrator]);
     expect(child('locales').canActivate).toEqual([requireAdministrator]);
+    expect(child('catalogo').canActivate).toBeUndefined();
+    expect(child('catalogo').loadComponent).toBeTypeOf('function');
     expect(child('')?.redirectTo).toBe(homeRedirect);
   });
 

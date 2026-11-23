@@ -1,0 +1,410 @@
+<div class="w-full">
+  <div class="flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <p class="text-xs font-bold tracking-widest text-primary">ESPECIALIDADES Y SERVICIOS</p>
+      <h1 class="mt-2 font-display text-3xl font-extrabold">Catálogo de servicios</h1>
+      <p class="mt-2 text-sm text-muted-foreground">
+        {{
+          admin()
+            ? 'Organiza las especialidades y los servicios disponibles para tu equipo.'
+            : 'Consulta las especialidades y los servicios disponibles para tu equipo.'
+        }}
+      </p>
+    </div>
+    @if (admin()) {
+      <button
+        class="rounded-xl bg-primary px-4 py-3 font-bold text-primary-foreground"
+        (click)="form('especialidad')"
+      >
+        + Nueva especialidad
+      </button>
+    }
+  </div>
+  <p class="my-6 text-sm text-muted-foreground">
+    {{ specialties().length }} especialidades · {{ services().length }} servicios · Un catálogo
+    compartido por todos los locales
+  </p>
+  <section
+    class="overflow-hidden rounded-2xl border border-border bg-card"
+    aria-label="Catálogo de especialidades y servicios"
+  >
+    <div class="flex flex-wrap gap-3 border-b border-border p-4">
+      <label class="sr-only" for="catalog-search">Buscar especialidad o servicio</label
+      ><input
+        id="catalog-search"
+        class="min-w-48 flex-1 rounded-lg border border-border px-3 py-2"
+        type="search"
+        placeholder="Buscar especialidad o servicio"
+        [ngModel]="query()"
+        (ngModelChange)="search($event)"
+      />
+      <label class="sr-only" for="catalog-specialty">Filtrar por especialidad</label>
+      <div
+        hlmSelect
+        [value]="filterSpecialty() || allSpecialties"
+        [itemToString]="specialtyFilterLabel"
+        (valueChange)="setFilterSpecialty($event)"
+      >
+        <hlm-select-trigger buttonId="catalog-specialty">
+          <hlm-select-value />
+        </hlm-select-trigger>
+        <ng-template hlmSelectPortal>
+          <hlm-select-content>
+            <hlm-select-item [value]="allSpecialties">Todas las especialidades</hlm-select-item>
+            @for (s of specialties(); track s.id) {
+              <hlm-select-item [value]="s.id">
+                {{ s.name }}{{ s.isActive ? '' : ' · Inactiva' }}
+              </hlm-select-item>
+            }
+          </hlm-select-content>
+        </ng-template>
+      </div>
+      @if (admin()) {
+        <label class="sr-only" for="catalog-status">Filtrar por estado</label>
+        <div
+          hlmSelect
+          [value]="filterStatus()"
+          [itemToString]="statusFilterLabel"
+          (valueChange)="setFilterStatus($event)"
+        >
+          <hlm-select-trigger buttonId="catalog-status">
+            <hlm-select-value />
+          </hlm-select-trigger>
+          <ng-template hlmSelectPortal>
+            <hlm-select-content>
+              <hlm-select-item value="all">Todos</hlm-select-item>
+              <hlm-select-item value="active">Activos</hlm-select-item>
+              <hlm-select-item value="inactive">Inactivos</hlm-select-item>
+            </hlm-select-content>
+          </ng-template>
+        </div>
+      }
+      <button
+        class="text-sm font-bold text-primary"
+        [disabled]="!query() && !filterSpecialty() && filterStatus() === 'all'"
+        (click)="clear()"
+      >
+        Limpiar filtros
+      </button>
+    </div>
+    <div aria-live="polite">
+      @if (loading()) {
+        <div class="p-12 text-center">Cargando catálogo...</div>
+      } @else if (loadError()) {
+        <div class="p-12 text-center">
+          <h2 class="font-bold">No pudimos cargar el catálogo</h2>
+          <p>Comprueba tu conexión y vuelve a intentarlo.</p>
+          <button class="mt-4 rounded-lg border px-4 py-2" (click)="load()">Reintentar</button>
+        </div>
+      } @else if (!specialties().length) {
+        <div class="p-12 text-center">
+          <h2 class="font-bold">El catálogo está vacío</h2>
+          <p>
+            {{
+              admin()
+                ? 'Crea una especialidad para comenzar a agregar servicios.'
+                : 'Todavía no hay especialidades disponibles.'
+            }}
+          </p>
+          @if (admin()) {
+            <button
+              class="mt-4 rounded-lg bg-primary px-4 py-2 text-primary-foreground"
+              (click)="form('especialidad')"
+            >
+              + Nueva especialidad
+            </button>
+          }
+        </div>
+      } @else if (!groups().length) {
+        <div class="p-12 text-center">
+          <h2 class="font-bold">No encontramos coincidencias</h2>
+          <p>Prueba con otro nombre o cambia los filtros.</p>
+          <button class="mt-4 rounded-lg border px-4 py-2" (click)="clear()">
+            Limpiar búsqueda y filtros
+          </button>
+        </div>
+      } @else {
+        @for (group of groups(); track group.specialty.id) {
+          <section class="border-b border-border">
+            <div class="flex items-center gap-4 bg-muted/40 p-4">
+              <button
+                type="button"
+                class="grid size-10 shrink-0 cursor-pointer place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                [attr.aria-expanded]="!collapsed().has(group.specialty.id)"
+                [attr.aria-label]="
+                  (collapsed().has(group.specialty.id) ? 'Expandir ' : 'Contraer ') +
+                  group.specialty.name
+                "
+                (click)="toggle(group.specialty.id)"
+              >
+                <svg
+                  class="size-5 transition-transform duration-200"
+                  [class.rotate-90]="!collapsed().has(group.specialty.id)"
+                  aria-hidden="true"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M9 6l6 6-6 6" />
+                </svg></button
+              ><button
+                class="flex-1 cursor-pointer text-left"
+                (click)="detail('especialidad', group.specialty)"
+              >
+                <strong>{{ group.specialty.name }}</strong
+                ><span class="block text-sm text-muted-foreground"
+                  >{{ group.specialty.description || 'Sin descripción' }} ·
+                  {{ group.visible.length }} servicios en esta vista</span
+                ></button
+              ><span class="rounded-full bg-secondary px-3 py-1 text-xs font-bold">{{
+                group.specialty.isActive ? 'Activo' : 'Inactivo'
+              }}</span>
+            </div>
+            @if (!collapsed().has(group.specialty.id)) {
+              <div animate.enter="animate-in fade-in-0 slide-in-from-top-1 duration-150">
+                @for (service of group.visible; track service.id) {
+                  <div class="flex items-center gap-4 border-t border-border px-6 py-4 pl-14">
+                    <button
+                      class="flex-1 cursor-pointer text-left"
+                      (click)="detail('servicio', service)"
+                    >
+                      <strong>{{ service.name }}</strong
+                      ><span class="block text-sm text-muted-foreground">{{
+                        service.description || 'Sin descripción'
+                      }}</span></button
+                    ><span class="rounded-full bg-secondary px-3 py-1 text-xs font-bold">{{
+                      service.isActive ? 'Activo' : 'Inactivo'
+                    }}</span>
+                  </div>
+                } @empty {
+                  <p class="px-14 py-4 text-sm text-muted-foreground">
+                    {{
+                      group.children.length
+                        ? 'No hay servicios que coincidan con los filtros.'
+                        : 'Aún no hay servicios en esta especialidad.'
+                    }}
+                  </p>
+                }
+                @if (admin()) {
+                  @if (group.specialty.isActive) {
+                    <button
+                      class="cursor-pointer px-14 py-4 text-sm font-bold text-primary"
+                      (click)="form('servicio', null, group.specialty.id)"
+                    >
+                      + Agregar servicio
+                    </button>
+                  } @else {
+                    <p class="px-14 py-4 text-sm text-muted-foreground">
+                      Reactiva esta especialidad para agregar servicios.
+                    </p>
+                  }
+                }
+              </div>
+            }
+          </section>
+        }
+      }
+    </div>
+    <div class="p-4 text-xs text-muted-foreground">
+      Las especialidades y los servicios se conservan al desactivarlos.
+    </div>
+  </section>
+</div>
+<app-staff-drawer
+  [open]="!!selected()"
+  labelledBy="catalog-drawer-title"
+  [blocked]="confirming()"
+  (closed)="close()"
+>
+  @if (selected(); as current) {
+    <header class="flex items-center justify-between border-b p-6">
+      <div>
+        <p class="text-xs font-bold text-primary">
+          {{ current.kind === 'especialidad' ? 'ESPECIALIDAD' : 'SERVICIO' }}
+        </p>
+        <h2 id="catalog-drawer-title" class="text-xl font-bold">
+          {{ current.mode === 'detail' ? 'Detalle' : current.item ? 'Editar' : 'Nueva' }}
+          {{ current.kind }}
+        </h2>
+      </div>
+      <button aria-label="Cerrar panel" (click)="close()">×</button>
+    </header>
+    <div class="flex-1 overflow-y-auto p-6">
+      @if (current.mode === 'detail' && current.item; as item) {
+        <h3 class="text-xl font-bold">{{ item.name }}</h3>
+        <p class="my-3">{{ item.isActive ? 'Activo' : 'Inactivo' }}</p>
+        @if ('especialidadId' in item) {
+          <p class="mt-4 text-sm text-muted-foreground">Especialidad</p>
+          <p>{{ specialtyName(item.especialidadId) }}</p>
+        } @else {
+          <p class="mt-4 text-sm text-muted-foreground">Servicios</p>
+          <p>{{ specialtyServiceCount(item.id) }} en esta especialidad</p>
+        }
+        <p class="mt-4 text-sm text-muted-foreground">Descripción</p>
+        <p>{{ item.description || 'Sin descripción' }}</p>
+        @if (admin()) {
+          <div class="mt-6 rounded-xl border p-4">
+            <h3 class="font-bold">Estado en el catálogo</h3>
+            @if (item.isActive) {
+              <p class="my-3 text-sm">
+                Al desactivar, el registro dejará de aparecer en la consulta del equipo. Sus datos
+                se conservan.
+              </p>
+            } @else {
+              <p class="my-3 text-sm">
+                Este registro no aparece en la consulta del equipo. Puedes reactivarlo.
+              </p>
+            }
+            <button #statusTrigger class="rounded-lg border px-4 py-2" (click)="confirmStatus()">
+              {{ item.isActive ? 'Desactivar' : 'Reactivar' }} {{ current.kind }}
+            </button>
+          </div>
+        }
+      } @else {
+        <form id="catalog-form" (ngSubmit)="save()" class="grid gap-4">
+          <div>
+            <label for="catalog-name">Nombre <span aria-hidden="true">*</span></label>
+            <input
+              id="catalog-name"
+              name="name"
+              class="mt-1 w-full rounded-lg border px-3 py-2"
+              [attr.aria-invalid]="fieldError('Name') ? 'true' : null"
+              [(ngModel)]="name"
+            />
+            <small>Hasta 100 caracteres.</small>
+            @if (fieldError('Name'); as message) {
+              <p class="mt-1 text-sm text-destructive">{{ message }}</p>
+            }
+          </div>
+          @if (current.kind === 'servicio') {
+            <div>
+              <label for="catalog-form-specialty"
+                >Especialidad <span aria-hidden="true">*</span></label
+              >
+              <select
+                id="catalog-form-specialty"
+                name="specialty"
+                class="mt-1 w-full rounded-lg border px-3 py-2"
+                [attr.aria-invalid]="fieldError('EspecialidadId') ? 'true' : null"
+                [(ngModel)]="specialtyId"
+              >
+                <option value="">Selecciona una especialidad</option>
+                @for (s of specialties(); track s.id) {
+                  @if (s.isActive || s.id === specialtyId) {
+                    <option [value]="s.id" [disabled]="!s.isActive">
+                      {{ s.name }}{{ s.isActive ? '' : ' · Inactiva' }}
+                    </option>
+                  }
+                }
+              </select>
+              <small>Solo puedes seleccionar especialidades activas.</small>
+              @if (fieldError('EspecialidadId'); as message) {
+                <p class="mt-1 text-sm text-destructive">{{ message }}</p>
+              }
+            </div>
+          }
+          <div>
+            <label for="catalog-description">Descripción (opcional)</label>
+            <textarea
+              id="catalog-description"
+              name="description"
+              class="mt-1 w-full rounded-lg border px-3 py-2"
+              rows="4"
+              [attr.aria-invalid]="fieldError('Description') ? 'true' : null"
+              [(ngModel)]="description"
+            ></textarea>
+            <small>Hasta 500 caracteres.</small>
+            @if (fieldError('Description'); as message) {
+              <p class="mt-1 text-sm text-destructive">{{ message }}</p>
+            }
+          </div>
+        </form>
+      }
+      @if (error()) {
+        <p role="alert" class="mt-4 rounded-lg border border-destructive p-3 text-destructive">
+          {{ error() }}
+        </p>
+      }
+    </div>
+    <footer class="flex justify-end gap-3 border-t p-6">
+      <button class="rounded-lg border px-4 py-2" (click)="close()">Cerrar</button>
+      @if (admin() && current.mode === 'detail' && current.item) {
+        <button
+          class="rounded-lg bg-primary px-4 py-2 text-primary-foreground"
+          (click)="form(current.kind, current.item)"
+        >
+          Editar
+        </button>
+      }
+      @if (current.mode === 'form') {
+        <button
+          class="rounded-lg bg-primary px-4 py-2 text-primary-foreground"
+          type="submit"
+          form="catalog-form"
+          [disabled]="saving()"
+        >
+          Guardar cambios
+        </button>
+      }
+    </footer>
+  }
+</app-staff-drawer>
+@if (confirmation(); as pending) {
+  <div
+    class="fixed inset-0 z-[80] grid place-items-center overflow-y-auto bg-brand-ink/45 p-4 backdrop-blur-[2px]"
+    (click)="cancelConfirmation()"
+  >
+    <div
+      class="w-full max-w-[440px] rounded-2xl border border-border bg-card p-6 shadow-xl"
+      role="alertdialog"
+      aria-modal="true"
+      cdkTrapFocus
+      aria-labelledby="catalog-confirmation-title"
+      aria-describedby="catalog-confirmation-description"
+      (click)="$event.stopPropagation()"
+      (keydown.escape)="cancelConfirmationWithEscape($event)"
+    >
+      <h3 id="catalog-confirmation-title" class="text-xl font-bold">
+        ¿{{ pending.item.isActive ? 'Desactivar' : 'Reactivar' }} {{ pending.kind }}?
+      </h3>
+      <div id="catalog-confirmation-description">
+        <p class="my-3">
+          {{ pending.item.name }}
+          {{
+            pending.item.isActive
+              ? 'dejará de aparecer en la consulta del equipo. Sus datos se conservarán.'
+              : 'volverá a estar disponible en el catálogo.'
+          }}
+        </p>
+        @if (blocked(pending.item, pending.kind); as warning) {
+          <p>{{ warning }}</p>
+        } @else {
+          @if (pending.kind === 'especialidad' && !pending.item.isActive) {
+            <p>Reactivar la especialidad no reactiva sus servicios.</p>
+          }
+        }
+      </div>
+      <div class="mt-6 flex flex-wrap justify-end gap-3">
+        <button
+          #cancelConfirmationButton
+          class="rounded-lg border px-4 py-2"
+          (click)="cancelConfirmation()"
+        >
+          Cancelar
+        </button>
+        @if (!blocked(pending.item, pending.kind)) {
+          <button
+            class="rounded-lg bg-primary px-4 py-2 text-primary-foreground"
+            [disabled]="saving()"
+            (click)="changeStatus()"
+          >
+            {{ pending.item.isActive ? 'Desactivar' : 'Reactivar' }}
+          </button>
+        }
+      </div>
+    </div>
+  </div>
+}

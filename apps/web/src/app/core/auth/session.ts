@@ -18,10 +18,10 @@ export function profileLabel(profile: string): string {
 
 /**
  * Ruta inicial después de iniciar sesión. Administración conserva la gestión de
- * locales; recepción y profesionales solo tienen su bienvenida.
+ * locales; recepción y profesionales empiezan en el catálogo, su primer módulo.
  */
 export function homePathFor(isAdministrator: boolean): string {
-  return isAdministrator ? '/locales' : '/bienvenida';
+  return isAdministrator ? '/locales' : '/catalogo';
 }
 
 /** Aviso que ve el administrador cuando la API ya no reconoce su sesión. */

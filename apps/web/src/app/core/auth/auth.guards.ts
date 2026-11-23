@@ -30,9 +30,9 @@ export const requireAdministrator: CanActivateFn = () => {
 };
 
 /**
- * La bienvenida es el destino de recepción y profesionales mientras no existan
- * sus módulos. Administración vuelve a su panel: no debe leer que no tiene
- * módulos de trabajo.
+ * La bienvenida sigue disponible para recepción y profesionales, aunque ya no
+ * es su pantalla inicial. Administración vuelve a su panel: no debe leer que no
+ * tiene módulos de trabajo.
  */
 export const requireNonAdministrator: CanActivateFn = () => {
   const session = inject(SessionService);
