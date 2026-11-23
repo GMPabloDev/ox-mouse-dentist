@@ -26,6 +26,19 @@ public enum StaffOutcomeStatus
     /// <summary>Solo las cuentas de recepción reciben locales.</summary>
     LocalsNotAllowed,
 
+    /// <summary>
+    /// El perfil <c>Profesional</c> no se crea ni se asigna desde el módulo de
+    /// personal: pertenece al alta de profesionales, que crea la cuenta y su ficha.
+    /// </summary>
+    ProfessionalProfileNotAllowed,
+
+    /// <summary>
+    /// La cuenta tiene una ficha de profesional y su perfil no se cambia desde
+    /// personal. El nombre, el correo y el teléfono se siguen editando con el
+    /// perfil actual.
+    /// </summary>
+    ProfileLockedByProfessionalFicha,
+
     /// <summary>La cuenta está desactivada y no admite enlaces utilizables.</summary>
     AccountInactive,
 

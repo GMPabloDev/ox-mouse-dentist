@@ -72,9 +72,9 @@ public sealed class StaffSessionRevocationTests(MouseDentApiFactory factory)
             admin,
             accountId,
             email,
-            StaffRole.Professional);
+            StaffRole.Admin);
         update.StatusCode.ShouldBe(HttpStatusCode.OK);
-        (await StaffTestHelpers.ReadStaffAsync(update)).Profile.ShouldBe(StaffRole.Professional);
+        (await StaffTestHelpers.ReadStaffAsync(update)).Profile.ShouldBe(StaffRole.Admin);
 
         using var after = await account.GetAsync("/api/auth/me", TestContext.Current.CancellationToken);
         after.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);

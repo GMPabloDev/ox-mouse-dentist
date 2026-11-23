@@ -209,7 +209,7 @@ internal static class StaffTestHelpers
     public static async Task<StaffAccountResponse> CreatePendingStaffAsync(
         HttpClient admin,
         string email,
-        string profile = StaffRole.Professional,
+        string profile = StaffRole.Admin,
         IEnumerable<Guid>? localIds = null)
     {
         using var response = await CreateStaffAsync(admin, email, profile, localIds);

@@ -74,6 +74,16 @@ const ROSA: StaffAccountResponse = {
   assignedLocalIds: ['local-barranco'],
 };
 
+const ANDREA: StaffAccountResponse = {
+  id: 'prof-1',
+  displayName: 'Andrea Quispe',
+  email: 'andrea.quispe@example.test',
+  phone: null,
+  profile: 'Profesional',
+  status: 'Activa',
+  assignedLocalIds: [],
+};
+
 function local(overrides: Partial<LocalResponse>): LocalResponse {
   return {
     id: 'local-1',
@@ -308,6 +318,56 @@ describe('StaffPage', () => {
     await flush(errorFixture);
 
     expect(text(errorFixture)).toContain('Valeria Torres');
+  });
+
+  it('no ofrece el perfil Profesional al invitar a una persona', async () => {
+    const fixture = await render();
+
+    button(fixture, 'Invitar persona').click();
+    await flush(fixture);
+
+    const profiles = [
+      ...host(fixture).querySelectorAll<HTMLInputElement>('input[name="profile"]'),
+    ].map((input) => input.value);
+
+    expect(profiles).toEqual(['Recepcion', 'Administrador']);
+    expect(text(fixture)).toContain('Elige un solo perfil para esta persona.');
+  });
+
+  it('no deja cambiar el perfil de una cuenta con ficha y explica el motivo', async () => {
+    const corrected: StaffAccountResponse = {
+      ...ANDREA,
+      displayName: 'Andrea Quispe Ríos',
+      phone: '987 654 321',
+    };
+    const api = staffApi({
+      list: vi.fn(async () => ({ ok: true as const, value: [ELENA, ANDREA] })),
+      update: vi.fn(async () => ({ ok: true as const, value: corrected })),
+    });
+    const fixture = await render(api);
+
+    personButton(fixture, 'Andrea Quispe').click();
+    await flush(fixture);
+    button(fixture, 'Editar').click();
+    await flush(fixture);
+
+    expect(host(fixture).querySelectorAll('input[name="profile"]').length).toBe(0);
+    expect(text(fixture)).toContain('Perfil Profesional vinculado a una ficha');
+    expect(text(fixture)).toContain('se define en el alta de profesionales');
+
+    setInput(fixture, '#staff-name', 'Andrea Quispe Ríos');
+    setInput(fixture, '#staff-phone', '987 654 321');
+    button(fixture, 'Guardar cambios').click();
+    await flush(fixture);
+
+    expect(api.update).toHaveBeenCalledWith('prof-1', {
+      displayName: 'Andrea Quispe Ríos',
+      email: 'andrea.quispe@example.test',
+      phone: '987 654 321',
+      profile: 'Profesional',
+      assignedLocalIds: [],
+    });
+    expect(text(fixture)).toContain('Cambios guardados.');
   });
 
   it('valida el alta, exige un local activo y conserva lo escrito', async () => {

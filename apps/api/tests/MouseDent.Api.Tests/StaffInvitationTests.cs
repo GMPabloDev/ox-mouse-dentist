@@ -82,7 +82,7 @@ public sealed class StaffInvitationTests(MouseDentApiFactory factory) : IClassFi
         var email = StaffTestHelpers.UniqueEmail("invitacion.fallida");
         factory.Emails.FailingAddresses.Add(email);
 
-        using var creation = await StaffTestHelpers.CreateStaffAsync(admin, email, StaffRole.Professional);
+        using var creation = await StaffTestHelpers.CreateStaffAsync(admin, email, StaffRole.Admin);
         creation.StatusCode.ShouldBe(HttpStatusCode.BadGateway);
         var createdId = await ProblemAccountIdAsync(creation);
 
@@ -166,7 +166,7 @@ public sealed class StaffInvitationTests(MouseDentApiFactory factory) : IClassFi
             admin,
             account.Id,
             newEmail,
-            StaffRole.Professional);
+            StaffRole.Admin);
         update.StatusCode.ShouldBe(HttpStatusCode.OK);
         (await StaffTestHelpers.ReadStaffAsync(update)).Status.ShouldBe(StaffAccountState.Pendiente);
 
@@ -234,7 +234,7 @@ public sealed class StaffInvitationTests(MouseDentApiFactory factory) : IClassFi
             admin,
             account.Id,
             newEmail,
-            StaffRole.Professional);
+            StaffRole.Admin);
         update.StatusCode.ShouldBe(HttpStatusCode.BadGateway);
 
         var stored = await StaffTestHelpers.FindStaffAsync(admin, newEmail);

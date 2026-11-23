@@ -1,6 +1,7 @@
 using MouseDent.Application.Auth;
 using MouseDent.Domain.Auth;
 using MouseDent.Domain.Locales;
+using MouseDent.Domain.Profesionales;
 using Shouldly;
 
 namespace MouseDent.Application.Tests;
@@ -85,7 +86,7 @@ public sealed class StaffManagementServiceTests
     }
 
     [Fact]
-    public async Task Creating_a_professional_without_local_assignments_is_allowed()
+    public async Task Creating_a_professional_account_is_rejected()
     {
         var accounts = new FakeStaffAccounts();
         var service = Service(accounts, new FakeLocalStore());
@@ -94,8 +95,8 @@ public sealed class StaffManagementServiceTests
             Details(StaffRole.Professional, "profesional@mousedent.local", []),
             TestContext.Current.CancellationToken);
 
-        outcome.Status.ShouldBe(StaffOutcomeStatus.Saved);
-        outcome.Account!.AssignedLocalIds.ShouldBeEmpty();
+        outcome.Status.ShouldBe(StaffOutcomeStatus.ProfessionalProfileNotAllowed);
+        accounts.Created.ShouldBeEmpty();
     }
 
     [Fact]
@@ -168,7 +169,25 @@ public sealed class StaffManagementServiceTests
     }
 
     [Fact]
-    public async Task Changing_the_profile_to_professional_drops_the_reception_assignments()
+    public async Task Changing_the_profile_to_administration_drops_the_reception_assignments()
+    {
+        var local = StaffSamples.NewLocal("Sede Centro");
+        var account = StaffSamples.Account(StaffRole.Reception, assignedLocalIds: [local.Id]);
+        var accounts = new FakeStaffAccounts(account);
+        var service = Service(accounts, new FakeLocalStore(local));
+
+        var outcome = await service.UpdateAsync(
+            account.Id,
+            Details(StaffRole.Admin, account.Email, []),
+            TestContext.Current.CancellationToken);
+
+        outcome.Status.ShouldBe(StaffOutcomeStatus.Saved);
+        outcome.Account!.Profile.ShouldBe(StaffRole.Admin);
+        outcome.Account.AssignedLocalIds.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task Changing_the_profile_to_professional_is_rejected()
     {
         var local = StaffSamples.NewLocal("Sede Centro");
         var account = StaffSamples.Account(StaffRole.Reception, assignedLocalIds: [local.Id]);
@@ -180,9 +199,71 @@ public sealed class StaffManagementServiceTests
             Details(StaffRole.Professional, account.Email, []),
             TestContext.Current.CancellationToken);
 
+        outcome.Status.ShouldBe(StaffOutcomeStatus.ProfessionalProfileNotAllowed);
+        accounts.Updated.ShouldBeEmpty();
+        account.Profile.ShouldBe(StaffRole.Reception);
+    }
+
+    [Fact]
+    public async Task A_professional_account_without_a_ficha_can_change_its_profile()
+    {
+        var account = StaffSamples.Account(StaffRole.Professional);
+        var accounts = new FakeStaffAccounts(account);
+        var service = Service(accounts, new FakeLocalStore());
+
+        var outcome = await service.UpdateAsync(
+            account.Id,
+            Details(StaffRole.Admin, account.Email, []),
+            TestContext.Current.CancellationToken);
+
         outcome.Status.ShouldBe(StaffOutcomeStatus.Saved);
-        outcome.Account!.Profile.ShouldBe(StaffRole.Professional);
-        outcome.Account.AssignedLocalIds.ShouldBeEmpty();
+        outcome.Account!.Profile.ShouldBe(StaffRole.Admin);
+    }
+
+    [Fact]
+    public async Task Changing_the_profile_of_an_account_with_a_ficha_is_rejected()
+    {
+        var account = StaffSamples.Account(StaffRole.Professional);
+        var accounts = new FakeStaffAccounts(account);
+        var service = Service(
+            accounts,
+            new FakeLocalStore(),
+            profesionales: new FakeProfesionales(Ficha(account.Id)));
+
+        var outcome = await service.UpdateAsync(
+            account.Id,
+            Details(StaffRole.Admin, account.Email, []),
+            TestContext.Current.CancellationToken);
+
+        outcome.Status.ShouldBe(StaffOutcomeStatus.ProfileLockedByProfessionalFicha);
+        accounts.Updated.ShouldBeEmpty();
+        account.Profile.ShouldBe(StaffRole.Professional);
+    }
+
+    [Fact]
+    public async Task Editing_the_data_of_a_professional_account_with_a_ficha_keeps_working()
+    {
+        var account = StaffSamples.Account(StaffRole.Professional);
+        var accounts = new FakeStaffAccounts(account);
+        var service = Service(
+            accounts,
+            new FakeLocalStore(),
+            profesionales: new FakeProfesionales(Ficha(account.Id)));
+
+        var outcome = await service.UpdateAsync(
+            account.Id,
+            Details(
+                StaffRole.Professional,
+                "correo.nuevo@mousedent.local",
+                [],
+                displayName: "Nombre Corregido"),
+            TestContext.Current.CancellationToken);
+
+        outcome.Status.ShouldBe(StaffOutcomeStatus.Saved);
+        outcome.Account!.DisplayName.ShouldBe("Nombre Corregido");
+        outcome.Account.Email.ShouldBe("correo.nuevo@mousedent.local");
+        outcome.Account.Profile.ShouldBe(StaffRole.Professional);
+        accounts.Updated.ShouldBe([account]);
     }
 
     [Fact]
@@ -284,7 +365,7 @@ public sealed class StaffManagementServiceTests
         var service = Service(accounts, new FakeLocalStore(), links, email);
 
         var outcome = await service.CreateAsync(
-            Details(StaffRole.Professional, "nueva@mousedent.local", []),
+            Details(StaffRole.Admin, "nueva@mousedent.local", []),
             TestContext.Current.CancellationToken);
 
         outcome.Status.ShouldBe(StaffOutcomeStatus.Saved);
@@ -302,7 +383,7 @@ public sealed class StaffManagementServiceTests
         var service = Service(accounts, new FakeLocalStore(), email: new FakeEmailSender { Fails = true });
 
         var outcome = await service.CreateAsync(
-            Details(StaffRole.Professional, "nueva@mousedent.local", []),
+            Details(StaffRole.Admin, "nueva@mousedent.local", []),
             TestContext.Current.CancellationToken);
 
         outcome.Status.ShouldBe(StaffOutcomeStatus.InvitationFailed);
@@ -427,8 +508,23 @@ public sealed class StaffManagementServiceTests
         FakeStaffAccounts accounts,
         FakeLocalStore locales,
         FakeAccessLinks? links = null,
-        FakeEmailSender? email = null) =>
-        StaffSamples.ManagementService(accounts, locales, links, email);
+        FakeEmailSender? email = null,
+        FakeProfesionales? profesionales = null) =>
+        StaffSamples.ManagementService(accounts, locales, links, email, profesionales);
+
+    /// <summary>Ficha activa mínima vinculada a la cuenta.</summary>
+    private static Profesional Ficha(Guid accountId)
+    {
+        var especialidad = Guid.NewGuid();
+        var local = Guid.NewGuid();
+
+        return Profesional.Crear(
+            accountId,
+            "COP 12345",
+            [especialidad],
+            [local],
+            new CatalogoActivo([especialidad], [local]));
+    }
 
     private static StaffAccountDetails Details(
         string profile,

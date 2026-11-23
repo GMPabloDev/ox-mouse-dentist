@@ -7,6 +7,7 @@ using MouseDent.Api.Auth;
 using MouseDent.Application.Auth;
 using MouseDent.Application.Locales;
 using MouseDent.Domain.Auth;
+using MouseDent.Domain.Profesionales;
 using Shouldly;
 
 namespace MouseDent.Api.Tests;
@@ -59,7 +60,11 @@ public sealed class StaffConcurrencyRegressionTests
             response.StatusCode.ShouldBe(HttpStatusCode.OK);
         };
         var access = Access(services, accounts, new StaffAccessOptions { PublicBaseUrl = MouseDentApiFactory.PublicBaseUrl });
-        var management = new StaffManagementService(accounts, services.GetRequiredService<ILocales>(), access);
+        var management = new StaffManagementService(
+            accounts,
+            services.GetRequiredService<ILocales>(),
+            services.GetRequiredService<IProfesionales>(),
+            access);
 
         var result = await management.UpdateAsync(id, new("Nombre nuevo", address, null, StaffRole.Professional, []), TestContext.Current.CancellationToken);
 
@@ -94,7 +99,11 @@ public sealed class StaffConcurrencyRegressionTests
             reset.StatusCode.ShouldBe(HttpStatusCode.NoContent);
         };
         var access = Access(services, accounts, new StaffAccessOptions { PublicBaseUrl = MouseDentApiFactory.PublicBaseUrl });
-        var management = new StaffManagementService(accounts, services.GetRequiredService<ILocales>(), access);
+        var management = new StaffManagementService(
+            accounts,
+            services.GetRequiredService<ILocales>(),
+            services.GetRequiredService<IProfesionales>(),
+            access);
 
         var result = await management.UpdateAsync(id, new("Nombre nuevo", address, null, StaffRole.Professional, []), TestContext.Current.CancellationToken);
 
@@ -216,7 +225,11 @@ public sealed class StaffConcurrencyRegressionTests
         var services = scope.ServiceProvider;
         var accounts = services.GetRequiredService<IStaffAccounts>();
         var access = Access(services, accounts, new StaffAccessOptions());
-        var management = new StaffManagementService(accounts, services.GetRequiredService<ILocales>(), access);
+        var management = new StaffManagementService(
+            accounts,
+            services.GetRequiredService<ILocales>(),
+            services.GetRequiredService<IProfesionales>(),
+            access);
 
         var result = await management.UpdateAsync(id, new("Persona", newEmail, null, StaffRole.Professional, []), TestContext.Current.CancellationToken);
 
@@ -243,7 +256,10 @@ public sealed class StaffConcurrencyRegressionTests
         {
             BeforeWrite = () => StaffTestHelpers.SetLocalStatusAsync(admin, local.Id, false),
         };
-        var management = new StaffManagementService(accounts, services.GetRequiredService<ILocales>(),
+        var management = new StaffManagementService(
+            accounts,
+            services.GetRequiredService<ILocales>(),
+            services.GetRequiredService<IProfesionales>(),
             Access(services, accounts, new StaffAccessOptions { PublicBaseUrl = MouseDentApiFactory.PublicBaseUrl }));
         var details = new StaffAccountDetails("Persona", email, null, StaffRole.Reception, [local.Id]);
         var result = edit

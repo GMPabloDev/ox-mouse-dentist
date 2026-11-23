@@ -6,6 +6,8 @@ import {
   draftFrom,
   hasActiveLocal,
   isDirty,
+  PROFILE_OPTIONS,
+  profileIsEditable,
   problemsFromFailure,
   statusLabel,
   toForm,
@@ -103,6 +105,26 @@ describe('modelo del formulario de personal', () => {
   it('no exige locales a administración ni a profesionales', () => {
     expect(validateDraft(draft({ profile: 'Administrador', localIds: [] }), LOCALS)).toEqual({});
     expect(validateDraft(draft({ profile: 'Profesional', localIds: [] }), LOCALS)).toEqual({});
+  });
+
+  it('solo ofrece recepción y administración como perfiles asignables', () => {
+    expect(PROFILE_OPTIONS.map((option) => option.value)).toEqual(['Recepcion', 'Administrador']);
+    expect(PROFILE_OPTIONS.map((option) => option.label)).toEqual(['Recepción', 'Administración']);
+  });
+
+  it('conserva el perfil Profesional de una cuenta existente y no lo deja editar', () => {
+    const professional = draftFrom(account({ profile: 'Profesional', assignedLocalIds: [] }));
+
+    expect(professional.profile).toBe('Profesional');
+    expect(profileIsEditable(professional)).toBe(false);
+    expect(validateDraft(professional, LOCALS)).toEqual({});
+    expect(toForm(professional).profile).toBe('Profesional');
+  });
+
+  it('permite elegir y cambiar el perfil de una cuenta nueva o de las que no son profesionales', () => {
+    expect(profileIsEditable(draft())).toBe(true);
+    expect(profileIsEditable(draft({ profile: 'Administrador' }))).toBe(true);
+    expect(profileIsEditable(draft({ id: 'cuenta-2', profile: 'Profesional' }))).toBe(false);
   });
 
   it('arma el cuerpo sin espacios y sin asignaciones para los perfiles que no son recepción', () => {

@@ -31,7 +31,7 @@ public sealed class StaffAdministratorGuardTests
             admin,
             seeded.Id,
             MouseDentApiFactory.AdminEmail,
-            StaffRole.Professional);
+            StaffRole.Reception);
 
         using var emailChange = await StaffTestHelpers.UpdateStaffAsync(
             admin,

@@ -1,18 +1,21 @@
 using MouseDent.Application.Locales;
 using MouseDent.Domain.Auth;
 using MouseDent.Domain.Locales;
+using MouseDent.Domain.Profesionales;
 
 namespace MouseDent.Application.Auth;
 
 /// <summary>
 /// Caso de uso de gestión de cuentas del personal. Decide qué asignaciones son
-/// válidas con el estado actual de los locales y delega en el almacén la
-/// escritura y la protección del último administrador, que necesita una
-/// transacción. La invitación y su envío pertenecen a <see cref="StaffAccessService"/>.
+/// válidas con el estado actual de los locales y qué cambios de perfil permite
+/// la ficha de profesional de la cuenta, y delega en el almacén la escritura y la
+/// protección del último administrador, que necesita una transacción. La
+/// invitación y su envío pertenecen a <see cref="StaffAccessService"/>.
 /// </summary>
 public sealed class StaffManagementService(
     IStaffAccounts accounts,
     ILocales locales,
+    IProfesionales profesionales,
     StaffAccessService access)
 {
     public Task<IReadOnlyList<StaffAccount>> ListAsync(string? search, CancellationToken cancellationToken) =>
@@ -22,6 +25,13 @@ public sealed class StaffManagementService(
         StaffAccountDetails details,
         CancellationToken cancellationToken)
     {
+        // El perfil Profesional nace del alta de profesionales, que crea la cuenta
+        // y su ficha juntas. Personal solo crea administración y recepción.
+        if (details.Profile == StaffRole.Professional)
+        {
+            return StaffOutcome.Failed(StaffOutcomeStatus.ProfessionalProfileNotAllowed);
+        }
+
         var assignments = await ResolveAssignmentsAsync(
             details,
             currentLocalIds: [],
@@ -58,6 +68,21 @@ public sealed class StaffManagementService(
         if (account is null)
         {
             return StaffOutcome.Failed(StaffOutcomeStatus.NotFound);
+        }
+
+        // Solo se bloquea el cambio de perfil. Editar el nombre, el correo o el
+        // teléfono de una cuenta Profesional con su mismo perfil es el único
+        // camino para corregir los datos que la ficha muestra desde la cuenta.
+        var profileChanged = !string.Equals(account.Profile, details.Profile, StringComparison.Ordinal);
+
+        if (profileChanged && details.Profile == StaffRole.Professional)
+        {
+            return StaffOutcome.Failed(StaffOutcomeStatus.ProfessionalProfileNotAllowed);
+        }
+
+        if (profileChanged && await profesionales.BuscarPorCuentaAsync(account.Id, cancellationToken) is not null)
+        {
+            return StaffOutcome.Failed(StaffOutcomeStatus.ProfileLockedByProfessionalFicha);
         }
 
         var expected = Snapshot(account);

@@ -13,12 +13,13 @@ import {
   canAssignLocal,
   isDirty,
   PROFILE_OPTIONS,
+  profileIsEditable,
   validateDraft,
+  type AssignableStaffProfile,
   type StaffDraft,
   type StaffLocal,
   type StaffProblemField,
   type StaffProblems,
-  type StaffProfile,
 } from './staff-form';
 import { StaffIcon } from './staff-icon';
 import { StaffNotice } from './staff-notice';
@@ -53,6 +54,7 @@ export class StaffEditor {
 
   protected readonly isNew = computed(() => this.draft().id === null);
   protected readonly dirty = computed(() => isDirty(this.draft(), this.initial()));
+  protected readonly profileEditable = computed(() => profileIsEditable(this.draft()));
   protected readonly problems = computed<StaffProblems>(() => ({
     ...this.localProblems(),
     ...this.serverProblems(),
@@ -83,7 +85,7 @@ export class StaffEditor {
     this.edited.emit(field);
   }
 
-  protected chooseProfile(profile: StaffProfile): void {
+  protected chooseProfile(profile: AssignableStaffProfile): void {
     this.draft.update((draft) => ({ ...draft, profile }));
     this.clearProblem('profile');
     this.clearProblem('localIds');
@@ -102,7 +104,7 @@ export class StaffEditor {
     this.edited.emit('localIds');
   }
 
-  protected profileSelected(profile: StaffProfile): boolean {
+  protected profileSelected(profile: AssignableStaffProfile): boolean {
     return this.draft().profile === profile;
   }
 

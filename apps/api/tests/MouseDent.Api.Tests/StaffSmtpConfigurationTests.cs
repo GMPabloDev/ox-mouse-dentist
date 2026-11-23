@@ -20,7 +20,7 @@ public sealed class StaffSmtpConfigurationTests
         using var factory = new InvalidSmtpFactory(port, timeout);
         using var admin = await StaffTestHelpers.SignInAsync(factory, MouseDentApiFactory.AdminEmail, MouseDentApiFactory.AdminPassword);
         var email = StaffTestHelpers.UniqueEmail("smtp.invalid");
-        using var response = await StaffTestHelpers.CreateStaffAsync(admin, email, StaffRole.Professional);
+        using var response = await StaffTestHelpers.CreateStaffAsync(admin, email, StaffRole.Admin);
         response.StatusCode.ShouldBe(HttpStatusCode.BadGateway);
         (await StaffTestHelpers.FindStaffAsync(admin, email)).Status.ShouldBe(MouseDent.Api.Auth.StaffAccountState.Pendiente);
         using var anonymous = factory.CreateClient();

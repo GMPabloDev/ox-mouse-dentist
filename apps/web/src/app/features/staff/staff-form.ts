@@ -13,17 +13,28 @@ export const PROFILE_OPTIONS = [
     label: 'Administración',
     description: 'Gestiona el personal y todos los locales.',
   },
-  {
-    value: 'Profesional',
-    label: 'Profesional',
-    description: 'Cuenta de acceso, todavía sin módulos de trabajo.',
-  },
 ] as const;
 
-export type StaffProfile = (typeof PROFILE_OPTIONS)[number]['value'];
+/**
+ * El módulo de personal ya no crea ni asigna el perfil `Profesional`: nace en el
+ * alta de profesionales, junto con su ficha. Se conserva para leer las cuentas
+ * que ya lo tienen y mostrar su etiqueta.
+ */
+export const PROFESSIONAL_PROFILE = {
+  value: 'Profesional',
+  label: 'Profesional',
+} as const;
+
+/** Perfiles que puede tener una cuenta, incluido el que solo se muestra. */
+export const ACCOUNT_PROFILES = [...PROFILE_OPTIONS, PROFESSIONAL_PROFILE] as const;
+
+export type StaffProfile = (typeof ACCOUNT_PROFILES)[number]['value'];
+
+/** Perfiles que el módulo de personal puede asignar. */
+export type AssignableStaffProfile = (typeof PROFILE_OPTIONS)[number]['value'];
 
 export function isProfile(value: string): value is StaffProfile {
-  return PROFILE_OPTIONS.some((option) => option.value === value);
+  return ACCOUNT_PROFILES.some((option) => option.value === value);
 }
 
 /** Local tal como lo necesita la asignación de recepción. */
@@ -87,6 +98,15 @@ export function isDirty(draft: StaffDraft, initial: StaffDraft): boolean {
 /** Un local inactivo solo se puede mantener si ya estaba asignado a la cuenta. */
 export function canAssignLocal(draft: StaffDraft, local: StaffLocal): boolean {
   return local.isActive || draft.originalLocalIds.includes(local.id);
+}
+
+/**
+ * El perfil de una cuenta con ficha se gestiona en el alta de profesionales. La
+ * interfaz distingue ese caso por el perfil `Profesional`, el único que puede
+ * tener ficha, y no ofrece el selector. Editar sus datos sigue disponible.
+ */
+export function profileIsEditable(draft: StaffDraft): boolean {
+  return draft.id === null || draft.profile !== PROFESSIONAL_PROFILE.value;
 }
 
 /**

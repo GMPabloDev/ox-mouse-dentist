@@ -87,25 +87,62 @@ public sealed class StaffAccountEndpointsTests(MouseDentApiFactory factory) : IC
         var email = $"jose.ramirez.{Guid.NewGuid():N}"[..24] + "@mousedent.test";
         var accented = email.Replace("jose", "josé");
 
-        using var response = await StaffTestHelpers.CreateStaffAsync(admin, accented, StaffRole.Professional);
+        using var response = await StaffTestHelpers.CreateStaffAsync(admin, accented, StaffRole.Admin);
 
         response.StatusCode.ShouldBe(HttpStatusCode.Created);
         (await StaffTestHelpers.ReadStaffAsync(response)).Email.ShouldBe(accented);
     }
 
     [Fact]
-    public async Task A_professional_account_is_created_without_locals()
+    public async Task A_professional_account_cannot_be_created_from_the_staff_module()
     {
         using var admin = await AdminAsync();
-        var email = StaffTestHelpers.UniqueEmail("profesional");
+        var email = StaffTestHelpers.UniqueEmail("profesional.rechazado");
 
         using var response = await StaffTestHelpers.CreateStaffAsync(admin, email, StaffRole.Professional);
 
-        response.StatusCode.ShouldBe(HttpStatusCode.Created);
-        var created = await StaffTestHelpers.ReadStaffAsync(response);
-        created.Profile.ShouldBe(StaffRole.Professional);
-        created.AssignedLocalIds.ShouldBeEmpty();
-        created.Status.ShouldBe(StaffAccountState.Pendiente);
+        response.StatusCode.ShouldBe(HttpStatusCode.Conflict);
+        response.Content.Headers.ContentType?.MediaType.ShouldBe("application/problem+json");
+        var problem = await response.Content.ReadFromJsonAsync<ProblemPayload>(
+            TestContext.Current.CancellationToken);
+        problem.ShouldNotBeNull();
+        problem.Title.ShouldBe("Perfil Profesional fuera del módulo de personal");
+        problem.Detail.ShouldNotBeNullOrWhiteSpace();
+
+        // El rechazo no crea la cuenta ni envía una invitación.
+        (await StaffTestHelpers.ListStaffAsync(admin, email)).ShouldBeEmpty();
+        factory.Emails.SentTo(email).ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task Changing_a_reception_account_to_professional_is_rejected_without_editing_it()
+    {
+        using var admin = await AdminAsync();
+        var local = await StaffTestHelpers.CreateLocalAsync(admin);
+        var email = StaffTestHelpers.UniqueEmail("recepcion.a.profesional");
+        var account = await StaffTestHelpers.CreatePendingStaffAsync(
+            admin,
+            email,
+            StaffRole.Reception,
+            [local.Id]);
+
+        using var response = await StaffTestHelpers.UpdateStaffAsync(
+            admin,
+            account.Id,
+            email,
+            StaffRole.Professional);
+
+        response.StatusCode.ShouldBe(HttpStatusCode.Conflict);
+        response.Content.Headers.ContentType?.MediaType.ShouldBe("application/problem+json");
+        var problem = await response.Content.ReadFromJsonAsync<ProblemPayload>(
+            TestContext.Current.CancellationToken);
+        problem.ShouldNotBeNull();
+        problem.Title.ShouldBe("Perfil Profesional fuera del módulo de personal");
+
+        var stored = await StaffTestHelpers.FindStaffAsync(admin, email);
+        stored.Profile.ShouldBe(StaffRole.Reception);
+        stored.AssignedLocalIds.ShouldBe([local.Id]);
+        stored.Status.ShouldBe(StaffAccountState.Pendiente);
     }
 
     [Fact]
@@ -158,8 +195,8 @@ public sealed class StaffAccountEndpointsTests(MouseDentApiFactory factory) : IC
 
         var cases = new (object Body, string Field)[]
         {
-            (StaffTestHelpers.Body(email, StaffRole.Professional, displayName: ""), "DisplayName"),
-            (StaffTestHelpers.Body("no-es-un-correo", StaffRole.Professional), "Email"),
+            (StaffTestHelpers.Body(email, StaffRole.Admin, displayName: ""), "DisplayName"),
+            (StaffTestHelpers.Body("no-es-un-correo", StaffRole.Admin), "Email"),
             (StaffTestHelpers.Body(email, "Coordinador"), "Profile"),
             (StaffTestHelpers.Body(email, StaffRole.Reception), "AssignedLocalIds"),
             (StaffTestHelpers.Body(email, StaffRole.Admin, [local.Id]), "AssignedLocalIds"),
@@ -185,7 +222,7 @@ public sealed class StaffAccountEndpointsTests(MouseDentApiFactory factory) : IC
         using var admin = await AdminAsync();
         var email = StaffTestHelpers.UniqueEmail("correo.repetido");
 
-        using var created = await StaffTestHelpers.CreateStaffAsync(admin, email, StaffRole.Professional);
+        using var created = await StaffTestHelpers.CreateStaffAsync(admin, email, StaffRole.Admin);
         created.StatusCode.ShouldBe(HttpStatusCode.Created);
         var account = await StaffTestHelpers.ReadStaffAsync(created);
 
@@ -196,7 +233,7 @@ public sealed class StaffAccountEndpointsTests(MouseDentApiFactory factory) : IC
         deactivate.StatusCode.ShouldBe(HttpStatusCode.OK);
         (await StaffTestHelpers.ReadStaffAsync(deactivate)).Status.ShouldBe(StaffAccountState.Inactiva);
 
-        using var duplicate = await StaffTestHelpers.CreateStaffAsync(admin, email.ToUpperInvariant(), StaffRole.Professional);
+        using var duplicate = await StaffTestHelpers.CreateStaffAsync(admin, email.ToUpperInvariant(), StaffRole.Admin);
 
         duplicate.StatusCode.ShouldBe(HttpStatusCode.Conflict);
         duplicate.Content.Headers.ContentType?.MediaType.ShouldBe("application/problem+json");
@@ -246,7 +283,7 @@ public sealed class StaffAccountEndpointsTests(MouseDentApiFactory factory) : IC
         using var created = await StaffTestHelpers.CreateStaffAsync(
             admin,
             email,
-            StaffRole.Professional,
+            StaffRole.Admin,
             displayName: displayName);
         created.StatusCode.ShouldBe(HttpStatusCode.Created);
 
@@ -337,7 +374,7 @@ public sealed class StaffAccountEndpointsTests(MouseDentApiFactory factory) : IC
         var id = Guid.NewGuid();
         var email = StaffTestHelpers.UniqueEmail("inexistente");
 
-        using var update = await StaffTestHelpers.UpdateStaffAsync(admin, id, email, StaffRole.Professional);
+        using var update = await StaffTestHelpers.UpdateStaffAsync(admin, id, email, StaffRole.Admin);
         using var status = await admin.PatchAsJsonAsync(
             $"/api/staff/{id}/status",
             new { isActive = true },
@@ -363,5 +400,5 @@ public sealed class StaffAccountEndpointsTests(MouseDentApiFactory factory) : IC
         yield return (HttpMethod.Patch, $"/api/staff/{id}/status");
     }
 
-    private sealed record ProblemPayload(string? Title);
+    private sealed record ProblemPayload(string? Title, string? Detail);
 }

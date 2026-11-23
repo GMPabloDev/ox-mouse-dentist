@@ -240,6 +240,11 @@ internal static class StaffSamples
         FakeStaffAccounts accounts,
         FakeLocalStore locales,
         FakeAccessLinks? links = null,
-        FakeEmailSender? email = null) =>
-        new(accounts, locales, AccessService(accounts, links ?? new FakeAccessLinks(), email ?? new FakeEmailSender()));
+        FakeEmailSender? email = null,
+        FakeProfesionales? profesionales = null) =>
+        new(
+            accounts,
+            locales,
+            profesionales ?? new FakeProfesionales(),
+            AccessService(accounts, links ?? new FakeAccessLinks(), email ?? new FakeEmailSender()));
 }

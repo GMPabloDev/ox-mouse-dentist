@@ -96,6 +96,7 @@ public static class StaffAccountEndpoints
             StaffOutcomeStatus.InvitationFailed => InvitationFailedProblem(outcome.Account!),
             StaffOutcomeStatus.DuplicateEmail => EmailTakenProblem(),
             StaffOutcomeStatus.LastAdministrator => LastAdministratorProblem(),
+            StaffOutcomeStatus.ProfessionalProfileNotAllowed => ProfessionalProfileProblem(),
             _ => AssignmentsProblem(outcome.Status),
         };
     }
@@ -116,6 +117,8 @@ public static class StaffAccountEndpoints
             StaffOutcomeStatus.NotFound => NotFoundProblem(),
             StaffOutcomeStatus.DuplicateEmail => EmailTakenProblem(),
             StaffOutcomeStatus.LastAdministrator => LastAdministratorProblem(),
+            StaffOutcomeStatus.ProfessionalProfileNotAllowed => ProfessionalProfileProblem(),
+            StaffOutcomeStatus.ProfileLockedByProfessionalFicha => ProfileLockedByFichaProblem(),
             _ => AssignmentsProblem(outcome.Status),
         };
     }
@@ -194,6 +197,24 @@ public static class StaffAccountEndpoints
     private static ProblemHttpResult LastAdministratorProblem() => TypedResults.Problem(
         title: "Último administrador disponible",
         detail: "La operación dejaría el sistema sin un administrador activo con contraseña establecida.",
+        statusCode: StatusCodes.Status409Conflict);
+
+    /// <summary>
+    /// El perfil Profesional pertenece al alta de profesionales, que crea la cuenta
+    /// y su ficha en la misma operación.
+    /// </summary>
+    private static ProblemHttpResult ProfessionalProfileProblem() => TypedResults.Problem(
+        title: "Perfil Profesional fuera del módulo de personal",
+        detail: "Las cuentas de perfil Profesional se crean desde el alta de profesionales, junto con su ficha. Aquí solo puedes usar Administrador o Recepcion.",
+        statusCode: StatusCodes.Status409Conflict);
+
+    /// <summary>
+    /// El perfil de una cuenta vinculada a una ficha se decide desde profesionales;
+    /// sus datos de contacto se siguen corrigiendo aquí.
+    /// </summary>
+    private static ProblemHttpResult ProfileLockedByFichaProblem() => TypedResults.Problem(
+        title: "Perfil vinculado a una ficha de profesional",
+        detail: "Esta cuenta tiene una ficha de profesional, así que su perfil no se cambia desde el módulo de personal. Puedes editar el nombre, el correo y el teléfono manteniendo el perfil Profesional.",
         statusCode: StatusCodes.Status409Conflict);
 
     /// <summary>
