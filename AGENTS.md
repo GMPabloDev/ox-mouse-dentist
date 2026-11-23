@@ -154,6 +154,22 @@ Los comandos `db:*` necesitan que ejecutes `dotnet tool restore` al menos una ve
   configuración están en el README; no las dupliques en otros documentos ni crees administradores
   desde el producto.
 
+## Datos de Development
+
+El proyecto está en desarrollo y todavía no opera con datos reales. La base de Development contiene
+datos ficticios y es descartable.
+
+- Si el modelo cambia y una migración, una prueba o el arranque chocan con los datos existentes,
+  recrea la base. No escribas migraciones de datos, compatibilidades ni código especial para
+  conservar datos de prueba.
+- Un cambio de modelo se juzga por el esquema final, no por lo que había guardado.
+- Recréala con los comandos del proyecto: `npm run db:update` aplica las migraciones y el arranque
+  de Development siembra los roles y la cuenta de administración.
+- Lo que sí debes conservar es lo que vive fuera de la base: secretos y configuración por variables
+  de entorno, y los archivos que sube la aplicación, como las fotos de los locales.
+- Esta regla no autoriza usar datos reales de pacientes en Development. La evaluación se hace con
+  datos ficticios.
+
 ## Decisiones
 
 **EF Core 10 con SQLite.** `MouseDentDbContext` vive en Infrastructure y contiene las tablas de
