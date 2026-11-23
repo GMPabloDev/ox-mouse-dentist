@@ -8,6 +8,7 @@ using MouseDent.Domain.Auth;
 using MouseDent.Domain.Catalogo;
 using MouseDent.Domain.Locales;
 using MouseDent.Infrastructure.Persistence;
+using MouseDent.Infrastructure.Profesionales;
 using Shouldly;
 
 namespace MouseDent.Api.Tests;
@@ -108,7 +109,58 @@ public sealed class StaffProfessionalProfileTests(MouseDentApiFactory factory)
     }
 
     [Fact]
-    public async Task An_existing_professional_account_keeps_signing_in()
+    public async Task An_inactive_ficha_also_blocks_the_profile_change()
+    {
+        var email = StaffTestHelpers.UniqueEmail("profesional.ficha.inactiva");
+        var accountId = await factory.SeedAccountAsync(email, Password, StaffRole.Professional);
+        await SeedInactiveFichaAsync(accountId);
+        using var admin = await AdminAsync();
+
+        using var response = await StaffTestHelpers.UpdateStaffAsync(
+            admin,
+            accountId,
+            email,
+            StaffRole.Admin);
+
+        response.StatusCode.ShouldBe(HttpStatusCode.Conflict);
+        var problem = await response.Content.ReadFromJsonAsync<ProblemPayload>(Token);
+        problem.ShouldNotBeNull();
+        problem.Title.ShouldBe("Perfil vinculado a una ficha de profesional");
+        (await StaffTestHelpers.FindStaffAsync(admin, email)).Profile.ShouldBe(StaffRole.Professional);
+    }
+
+    [Fact]
+    public async Task A_professional_registered_with_its_ficha_signs_in_and_answers_its_profile()
+    {
+        var registration = await RegisterProfessionalAsync();
+        (await ListAsync(registration.Email)).ShouldHaveSingleItem().AccountStatus
+            .ShouldBe(EstadoDeCuenta.Pendiente);
+
+        // La cuenta nace pendiente: el enlace de la invitación establece su contraseña.
+        var invitation = factory.Emails.LastTokenTo(registration.Email);
+        invitation.ShouldNotBeNullOrWhiteSpace();
+        using var anonymous = factory.CreateClient();
+        using var completion = await StaffTestHelpers.ResetPasswordAsync(anonymous, invitation!, Password);
+        completion.StatusCode.ShouldBe(HttpStatusCode.NoContent);
+
+        using var login = await StaffTestHelpers.LoginAsync(anonymous, registration.Email, Password);
+        login.StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        var token = await factory.AccessTokenAsync(registration.Email, Password);
+        using var session = factory.WithToken(token);
+        using var me = await session.GetAsync("/api/auth/me", Token);
+        me.StatusCode.ShouldBe(HttpStatusCode.OK);
+        var user = await me.Content.ReadFromJsonAsync<AuthenticatedUser>(Token);
+        user.ShouldNotBeNull();
+        user.Email.ShouldBe(registration.Email);
+        user.Roles.ShouldContain(StaffRole.Professional);
+
+        (await ListAsync(registration.Email)).ShouldHaveSingleItem().AccountStatus
+            .ShouldBe(EstadoDeCuenta.Activa);
+    }
+
+    [Fact]
+    public async Task A_professional_account_seeded_without_a_ficha_keeps_signing_in()
     {
         var email = StaffTestHelpers.UniqueEmail("profesional.existente");
         await factory.SeedAccountAsync(email, Password, StaffRole.Professional);
@@ -144,6 +196,20 @@ public sealed class StaffProfessionalProfileTests(MouseDentApiFactory factory)
         outcome.Status.ShouldBe(ProfesionalAltaStatus.Saved);
 
         return new RegisteredProfessional(outcome.Ficha!.Id, email, colegiatura);
+    }
+
+    private async Task SeedInactiveFichaAsync(Guid accountId)
+    {
+        await using var scope = factory.Services.CreateAsyncScope();
+        var database = scope.ServiceProvider.GetRequiredService<MouseDentDbContext>();
+
+        database.Profesionales.Add(new ProfesionalGuardado
+        {
+            Id = Guid.NewGuid(),
+            StaffAccountId = accountId,
+            IsActive = false,
+        });
+        await database.SaveChangesAsync(Token);
     }
 
     private async Task<IReadOnlyList<ProfesionalResumen>> ListAsync(string search)

@@ -2,12 +2,13 @@ using System.Net;
 using System.Net.Http.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using MouseDent.Infrastructure.Auth;
 using MouseDent.Api.Auth;
 using MouseDent.Application.Auth;
 using MouseDent.Application.Locales;
+using MouseDent.Application.Profesionales;
 using MouseDent.Domain.Auth;
 using MouseDent.Domain.Profesionales;
+using MouseDent.Infrastructure.Auth;
 using Shouldly;
 
 namespace MouseDent.Api.Tests;
@@ -40,6 +41,48 @@ public sealed class StaffConcurrencyRegressionTests
         stored.Email.ShouldBe(newEmail);
         factory.Emails.SentTo(oldEmail).ShouldBeEmpty();
         factory.Emails.SentTo(newEmail).ShouldHaveSingleItem();
+    }
+
+    [Fact]
+    public async Task A_ficha_linked_before_the_write_still_locks_the_profile()
+    {
+        using var factory = new MouseDentApiFileDatabaseFactory();
+        using var admin = await StaffTestHelpers.SignInAsync(factory, MouseDentApiFactory.AdminEmail, MouseDentApiFactory.AdminPassword);
+        var address = StaffTestHelpers.UniqueEmail("interleaved.ficha");
+        var id = await factory.SeedAccountAsync(address, Password, StaffRole.Professional);
+        var (especialidad, local) = await AltaConcurrency.SeedAsync(factory);
+        using var scope = factory.Services.CreateScope();
+        var services = scope.ServiceProvider;
+        var accounts = new InterleavedAccounts(services.GetRequiredService<IStaffAccounts>())
+        {
+            // El alta de profesionales vincula la cuenta después de que personal leyó
+            // la ficha y justo antes de la escritura del cambio de perfil.
+            BeforeWrite = async () =>
+            {
+                var alta = await AltaConcurrency.RegisterAsync(factory, address, especialidad, local, colegiatura: null);
+                alta.Status.ShouldBe(ProfesionalAltaStatus.Saved);
+            },
+        };
+        var access = Access(services, accounts, new StaffAccessOptions { PublicBaseUrl = MouseDentApiFactory.PublicBaseUrl });
+        var management = new StaffManagementService(
+            accounts,
+            services.GetRequiredService<ILocales>(),
+            services.GetRequiredService<IProfesionales>(),
+            access);
+
+        var result = await management.UpdateAsync(
+            id,
+            new("Nombre nuevo", address, null, StaffRole.Admin, []),
+            TestContext.Current.CancellationToken);
+
+        // La ficha vinculada impide el cambio de perfil aunque la lectura anterior no la viera.
+        result.Status.ShouldBe(StaffOutcomeStatus.ProfileLockedByProfessionalFicha);
+        var stored = await StaffTestHelpers.FindStaffAsync(admin, address);
+        stored.Profile.ShouldBe(StaffRole.Professional);
+        stored.DisplayName.ShouldNotBe("Nombre nuevo");
+        await using var verify = factory.Services.CreateAsyncScope();
+        var fichas = verify.ServiceProvider.GetRequiredService<IProfesionales>();
+        (await fichas.BuscarPorCuentaAsync(id, TestContext.Current.CancellationToken)).ShouldNotBeNull();
     }
 
     [Fact]

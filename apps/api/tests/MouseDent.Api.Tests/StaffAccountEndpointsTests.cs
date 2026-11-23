@@ -217,6 +217,24 @@ public sealed class StaffAccountEndpointsTests(MouseDentApiFactory factory) : IC
     }
 
     [Fact]
+    public async Task The_validation_message_of_the_alta_does_not_offer_the_professional_profile()
+    {
+        using var admin = await AdminAsync();
+        var email = StaffTestHelpers.UniqueEmail("validacion.perfil");
+
+        using var response = await admin.PostAsJsonAsync(
+            "/api/staff",
+            StaffTestHelpers.Body(email, "Coordinador"),
+            TestContext.Current.CancellationToken);
+
+        response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        var errors = await StaffTestHelpers.ReadValidationProblemAsync(response);
+        var message = errors["Profile"].ShouldHaveSingleItem();
+        message.ShouldContain("Administrador o Recepcion");
+        message.ShouldNotContain(StaffRole.Professional);
+    }
+
+    [Fact]
     public async Task A_repeated_email_is_rejected_even_when_the_account_is_inactive()
     {
         using var admin = await AdminAsync();

@@ -11,7 +11,8 @@ namespace MouseDent.Infrastructure.Auth;
 /// credenciales y con EF Core para el perfil, el estado y las asignaciones.
 /// La comprobación del último administrador y su escritura comparten una
 /// transacción de escritura, así que dos solicitudes concurrentes se serializan
-/// y no pueden dejar el sistema sin administración.
+/// y no pueden dejar el sistema sin administración. La ficha del profesional se
+/// consulta en ese mismo contexto y transacción antes de cambiar el perfil.
 /// </summary>
 public sealed class EfStaffAccounts(UserManager<StaffUser> users, MouseDentDbContext database)
     : IStaffAccounts
@@ -154,6 +155,17 @@ public sealed class EfStaffAccounts(UserManager<StaffUser> users, MouseDentDbCon
             || !user.Assignments.Select(assignment => assignment.LocalId).ToHashSet().SetEquals(expected.AssignedLocalIds))
         {
             return StaffSaveResult.Changed;
+        }
+
+        // La ficha se lee con este mismo contexto y dentro de la transacción: si un
+        // alta de profesionales vincula la cuenta después de que el caso de uso la
+        // leyera, el cambio de perfil no pasa. Una ficha inactiva también bloquea.
+        if (!string.Equals(user.Profile, account.Profile, StringComparison.Ordinal)
+            && await database.Profesionales
+                .AsNoTracking()
+                .AnyAsync(ficha => ficha.StaffAccountId == user.Id, cancellationToken))
+        {
+            return StaffSaveResult.ProfileLockedByProfessionalFicha;
         }
 
         if (!await NewAssignmentsAreActiveAsync(account.AssignedLocalIds,

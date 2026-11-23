@@ -37,6 +37,10 @@ export type CreateLocalForm = {
 
 export type CreateStaffAccountForm = {
   /**
+   * Perfil único: Administrador o Recepcion. El perfil Profesional se asigna en el alta de profesionales, junto con la ficha.
+   */
+  profile?: string;
+  /**
    * Nombre visible de la persona.
    */
   displayName?: string;
@@ -48,10 +52,6 @@ export type CreateStaffAccountForm = {
    * Teléfono opcional. No se exige un formato concreto.
    */
   phone?: null | string;
-  /**
-   * Perfil único: Administrador, Recepcion o Profesional.
-   */
-  profile?: string;
   /**
    * Locales asignados. Solo recepción los recibe, y al añadir uno nuevo debe estar activo.
    */
@@ -238,6 +238,10 @@ export type UpdateLocalForm = {
 
 export type UpdateStaffAccountForm = {
   /**
+   * Perfil único: Administrador o Recepcion. El perfil Profesional de una cuenta existente se conserva y se asigna en el alta de profesionales.
+   */
+  profile?: string;
+  /**
    * Nombre visible de la persona.
    */
   displayName?: string;
@@ -249,10 +253,6 @@ export type UpdateStaffAccountForm = {
    * Teléfono opcional. No se exige un formato concreto.
    */
   phone?: null | string;
-  /**
-   * Perfil único: Administrador, Recepcion o Profesional.
-   */
-  profile?: string;
   /**
    * Locales asignados. Solo recepción los recibe, y al añadir uno nuevo debe estar activo.
    */

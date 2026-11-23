@@ -334,7 +334,7 @@ describe('StaffPage', () => {
     expect(text(fixture)).toContain('Elige un solo perfil para esta persona.');
   });
 
-  it('no deja cambiar el perfil de una cuenta con ficha y explica el motivo', async () => {
+  it('no deja cambiar el perfil de una cuenta Profesional y explica dónde se asigna', async () => {
     const corrected: StaffAccountResponse = {
       ...ANDREA,
       displayName: 'Andrea Quispe Ríos',
@@ -352,8 +352,8 @@ describe('StaffPage', () => {
     await flush(fixture);
 
     expect(host(fixture).querySelectorAll('input[name="profile"]').length).toBe(0);
-    expect(text(fixture)).toContain('Perfil Profesional vinculado a una ficha');
-    expect(text(fixture)).toContain('se define en el alta de profesionales');
+    expect(text(fixture)).toContain('Perfil Profesional asignado en profesionales');
+    expect(text(fixture)).toContain('se asigna en el alta de profesionales');
 
     setInput(fixture, '#staff-name', 'Andrea Quispe Ríos');
     setInput(fixture, '#staff-phone', '987 654 321');

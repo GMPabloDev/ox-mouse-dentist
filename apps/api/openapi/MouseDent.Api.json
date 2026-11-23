@@ -1723,6 +1723,10 @@
       "CreateStaffAccountForm": {
         "type": "object",
         "properties": {
+          "profile": {
+            "type": "string",
+            "description": "Perfil único: Administrador o Recepcion. El perfil Profesional se asigna en el alta de profesionales, junto con la ficha."
+          },
           "displayName": {
             "type": "string",
             "description": "Nombre visible de la persona."
@@ -1737,10 +1741,6 @@
               "string"
             ],
             "description": "Teléfono opcional. No se exige un formato concreto."
-          },
-          "profile": {
-            "type": "string",
-            "description": "Perfil único: Administrador, Recepcion o Profesional."
           },
           "assignedLocalIds": {
             "type": [
@@ -2232,6 +2232,10 @@
       "UpdateStaffAccountForm": {
         "type": "object",
         "properties": {
+          "profile": {
+            "type": "string",
+            "description": "Perfil único: Administrador o Recepcion. El perfil Profesional de una cuenta existente se conserva y se asigna en el alta de profesionales."
+          },
           "displayName": {
             "type": "string",
             "description": "Nombre visible de la persona."
@@ -2246,10 +2250,6 @@
               "string"
             ],
             "description": "Teléfono opcional. No se exige un formato concreto."
-          },
-          "profile": {
-            "type": "string",
-            "description": "Perfil único: Administrador, Recepcion o Profesional."
           },
           "assignedLocalIds": {
             "type": [

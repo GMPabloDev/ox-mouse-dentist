@@ -80,6 +80,9 @@ public sealed class StaffManagementService(
             return StaffOutcome.Failed(StaffOutcomeStatus.ProfessionalProfileNotAllowed);
         }
 
+        // El cambio de perfil se bloquea también dentro de la transacción de escritura,
+        // que es la garantía. Esta comprobación previa solo evita preparar una edición
+        // que el almacén va a rechazar.
         if (profileChanged && await profesionales.BuscarPorCuentaAsync(account.Id, cancellationToken) is not null)
         {
             return StaffOutcome.Failed(StaffOutcomeStatus.ProfileLockedByProfessionalFicha);
@@ -230,6 +233,8 @@ public sealed class StaffManagementService(
         StaffSaveResult.Saved => StaffOutcome.Saved(account),
         StaffSaveResult.NotFound => StaffOutcome.Failed(StaffOutcomeStatus.NotFound),
         StaffSaveResult.DuplicateEmail => StaffOutcome.Failed(StaffOutcomeStatus.DuplicateEmail),
+        StaffSaveResult.ProfileLockedByProfessionalFicha =>
+            StaffOutcome.Failed(StaffOutcomeStatus.ProfileLockedByProfessionalFicha),
         StaffSaveResult.LocalsUnavailable => StaffOutcome.Failed(StaffOutcomeStatus.LocalsUnavailable),
         _ => StaffOutcome.Failed(StaffOutcomeStatus.LastAdministrator),
     };

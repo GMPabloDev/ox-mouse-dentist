@@ -42,7 +42,9 @@ public interface IStaffAccounts
     /// puedan dejar el sistema sin administración. Si el estado no coincide con
     /// <paramref name="expected"/>, no escribe y devuelve <see cref="StaffSaveResult.Changed"/>.
     /// Cambiar el correo o desactivar también invalida los enlaces pendientes en
-    /// esa misma transacción.
+    /// esa misma transacción. El cambio de perfil de una cuenta con ficha de
+    /// profesional se rechaza en esa misma transacción, con
+    /// <see cref="StaffSaveResult.ProfileLockedByProfessionalFicha"/>.
     /// </summary>
     Task<StaffSaveResult> UpdateAsync(StaffAccount account, StaffAccount expected, CancellationToken cancellationToken);
 
@@ -75,6 +77,13 @@ public enum StaffSaveResult
 
     /// <summary>La operación dejaría el sistema sin un administrador activo con contraseña.</summary>
     LastAdministrator,
+
+    /// <summary>
+    /// La cuenta tiene una ficha de profesional y el cambio de perfil no se hace
+    /// desde personal. La comprobación ocurre dentro de la transacción de escritura,
+    /// porque un alta de profesional puede vincular la ficha después de la lectura.
+    /// </summary>
+    ProfileLockedByProfessionalFicha,
 
     LocalsUnavailable,
 }

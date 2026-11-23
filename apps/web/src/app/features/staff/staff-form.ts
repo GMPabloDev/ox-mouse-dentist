@@ -101,9 +101,10 @@ export function canAssignLocal(draft: StaffDraft, local: StaffLocal): boolean {
 }
 
 /**
- * El perfil de una cuenta con ficha se gestiona en el alta de profesionales. La
- * interfaz distingue ese caso por el perfil `Profesional`, el único que puede
- * tener ficha, y no ofrece el selector. Editar sus datos sigue disponible.
+ * El perfil `Profesional` se asigna en el alta de profesionales, así que aquí no se
+ * ofrece el selector. El contrato de la cuenta no dice si tiene ficha: la interfaz
+ * deduce el caso por el perfil, el único que puede tenerla, y por eso tampoco deja
+ * cambiar el de una cuenta `Profesional` sin ficha. Editar sus datos sigue disponible.
  */
 export function profileIsEditable(draft: StaffDraft): boolean {
   return draft.id === null || draft.profile !== PROFESSIONAL_PROFILE.value;

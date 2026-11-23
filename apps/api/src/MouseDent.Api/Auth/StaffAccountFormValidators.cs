@@ -9,7 +9,11 @@ namespace MouseDent.Api.Auth;
 /// </summary>
 public abstract class StaffAccountFormValidator<T> : AbstractValidator<T> where T : StaffAccountForm
 {
-    protected StaffAccountFormValidator()
+    /// <param name="profileMessage">
+    /// Perfiles que ofrece el formulario. El perfil <c>Profesional</c> sigue siendo un
+    /// valor conocido para que una edición pueda conservarlo, pero el alta no lo crea.
+    /// </param>
+    protected StaffAccountFormValidator(string profileMessage)
     {
         RuleFor(form => form.DisplayName)
             .NotEmpty().WithMessage("El nombre es obligatorio.")
@@ -26,7 +30,7 @@ public abstract class StaffAccountFormValidator<T> : AbstractValidator<T> where 
         RuleFor(form => form.Profile)
             .NotEmpty().WithMessage("El perfil es obligatorio.")
             .Must(StaffRole.IsKnown)
-            .WithMessage("Elige uno de los perfiles: Administrador, Recepcion o Profesional.");
+            .WithMessage(profileMessage);
 
         RuleFor(form => form)
             .Custom((form, context) =>
@@ -46,6 +50,7 @@ public abstract class StaffAccountFormValidator<T> : AbstractValidator<T> where 
 public sealed class CreateStaffAccountFormValidator : StaffAccountFormValidator<CreateStaffAccountForm>
 {
     public CreateStaffAccountFormValidator()
+        : base("Elige uno de los perfiles del alta: Administrador o Recepcion.")
     {
         RuleFor(form => form.AssignedLocalIds)
             .Must(localIds => localIds is { Count: > 0 })
@@ -54,4 +59,10 @@ public sealed class CreateStaffAccountFormValidator : StaffAccountFormValidator<
     }
 }
 
-public sealed class UpdateStaffAccountFormValidator : StaffAccountFormValidator<UpdateStaffAccountForm>;
+public sealed class UpdateStaffAccountFormValidator : StaffAccountFormValidator<UpdateStaffAccountForm>
+{
+    public UpdateStaffAccountFormValidator()
+        : base("Elige uno de los perfiles: Administrador, Recepcion o Profesional.")
+    {
+    }
+}
