@@ -11,6 +11,10 @@ export type AuthenticatedUser = {
   roles: Array<string>;
 };
 
+export type CatalogoStatusRequest = {
+  isActive: boolean;
+};
+
 export type CreateLocalForm = {
   /**
    * Nombre del local. Único entre todos, incluidos los inactivos, sin distinguir mayúsculas ni espacios de los extremos.
@@ -52,6 +56,18 @@ export type CreateStaffAccountForm = {
    * Locales asignados. Solo recepción los recibe, y al añadir uno nuevo debe estar activo.
    */
   assignedLocalIds?: null | Array<string>;
+};
+
+export type EspecialidadRequest = {
+  name: string;
+  description?: null | string;
+};
+
+export type EspecialidadResponse = {
+  id: string;
+  name: string;
+  description: null | string;
+  isActive: boolean;
 };
 
 export type HttpValidationProblemDetails = {
@@ -140,6 +156,20 @@ export type ProblemDetails = {
 export type ResetPasswordRequest = {
   token: string;
   password: string;
+};
+
+export type ServicioRequest = {
+  name: string;
+  especialidadId: string;
+  description?: null | string;
+};
+
+export type ServicioResponse = {
+  id: string;
+  name: string;
+  description: null | string;
+  especialidadId: string;
+  isActive: boolean;
 };
 
 export type StaffAccountResponse = {
@@ -722,3 +752,324 @@ export type SetLocalStatusResponses = {
 };
 
 export type SetLocalStatusResponse = SetLocalStatusResponses[keyof SetLocalStatusResponses];
+
+export type ListEspecialidadesData = {
+  body?: never;
+  path?: never;
+  query?: {
+    search?: string;
+    isActive?: boolean;
+  };
+  url: '/api/catalogo/especialidades';
+};
+
+export type ListEspecialidadesErrors = {
+  /**
+   * Unauthorized
+   */
+  401: ProblemDetails;
+  /**
+   * Forbidden
+   */
+  403: ProblemDetails;
+};
+
+export type ListEspecialidadesError = ListEspecialidadesErrors[keyof ListEspecialidadesErrors];
+
+export type ListEspecialidadesResponses = {
+  /**
+   * OK
+   */
+  200: Array<EspecialidadResponse>;
+};
+
+export type ListEspecialidadesResponse =
+  ListEspecialidadesResponses[keyof ListEspecialidadesResponses];
+
+export type CreateEspecialidadData = {
+  body: EspecialidadRequest;
+  path?: never;
+  query?: never;
+  url: '/api/catalogo/especialidades';
+};
+
+export type CreateEspecialidadErrors = {
+  /**
+   * Bad Request
+   */
+  400: HttpValidationProblemDetails;
+  /**
+   * Unauthorized
+   */
+  401: ProblemDetails;
+  /**
+   * Forbidden
+   */
+  403: ProblemDetails;
+  /**
+   * Conflict
+   */
+  409: ProblemDetails;
+};
+
+export type CreateEspecialidadError = CreateEspecialidadErrors[keyof CreateEspecialidadErrors];
+
+export type CreateEspecialidadResponses = {
+  /**
+   * Created
+   */
+  201: EspecialidadResponse;
+};
+
+export type CreateEspecialidadResponse =
+  CreateEspecialidadResponses[keyof CreateEspecialidadResponses];
+
+export type ListServiciosData = {
+  body?: never;
+  path?: never;
+  query?: {
+    search?: string;
+    isActive?: boolean;
+    especialidadId?: string;
+  };
+  url: '/api/catalogo/servicios';
+};
+
+export type ListServiciosErrors = {
+  /**
+   * Unauthorized
+   */
+  401: ProblemDetails;
+  /**
+   * Forbidden
+   */
+  403: ProblemDetails;
+};
+
+export type ListServiciosError = ListServiciosErrors[keyof ListServiciosErrors];
+
+export type ListServiciosResponses = {
+  /**
+   * OK
+   */
+  200: Array<ServicioResponse>;
+};
+
+export type ListServiciosResponse = ListServiciosResponses[keyof ListServiciosResponses];
+
+export type CreateServicioData = {
+  body: ServicioRequest;
+  path?: never;
+  query?: never;
+  url: '/api/catalogo/servicios';
+};
+
+export type CreateServicioErrors = {
+  /**
+   * Bad Request
+   */
+  400: HttpValidationProblemDetails;
+  /**
+   * Unauthorized
+   */
+  401: ProblemDetails;
+  /**
+   * Forbidden
+   */
+  403: ProblemDetails;
+  /**
+   * Not Found
+   */
+  404: ProblemDetails;
+  /**
+   * Conflict
+   */
+  409: ProblemDetails;
+};
+
+export type CreateServicioError = CreateServicioErrors[keyof CreateServicioErrors];
+
+export type CreateServicioResponses = {
+  /**
+   * Created
+   */
+  201: ServicioResponse;
+};
+
+export type CreateServicioResponse = CreateServicioResponses[keyof CreateServicioResponses];
+
+export type UpdateEspecialidadData = {
+  body: EspecialidadRequest;
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/api/catalogo/especialidades/{id}';
+};
+
+export type UpdateEspecialidadErrors = {
+  /**
+   * Bad Request
+   */
+  400: HttpValidationProblemDetails;
+  /**
+   * Unauthorized
+   */
+  401: ProblemDetails;
+  /**
+   * Forbidden
+   */
+  403: ProblemDetails;
+  /**
+   * Not Found
+   */
+  404: ProblemDetails;
+  /**
+   * Conflict
+   */
+  409: ProblemDetails;
+};
+
+export type UpdateEspecialidadError = UpdateEspecialidadErrors[keyof UpdateEspecialidadErrors];
+
+export type UpdateEspecialidadResponses = {
+  /**
+   * OK
+   */
+  200: EspecialidadResponse;
+};
+
+export type UpdateEspecialidadResponse =
+  UpdateEspecialidadResponses[keyof UpdateEspecialidadResponses];
+
+export type SetEspecialidadStatusData = {
+  body: CatalogoStatusRequest;
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/api/catalogo/especialidades/{id}/status';
+};
+
+export type SetEspecialidadStatusErrors = {
+  /**
+   * Bad Request
+   */
+  400: ProblemDetails;
+  /**
+   * Unauthorized
+   */
+  401: ProblemDetails;
+  /**
+   * Forbidden
+   */
+  403: ProblemDetails;
+  /**
+   * Not Found
+   */
+  404: ProblemDetails;
+  /**
+   * Conflict
+   */
+  409: ProblemDetails;
+};
+
+export type SetEspecialidadStatusError =
+  SetEspecialidadStatusErrors[keyof SetEspecialidadStatusErrors];
+
+export type SetEspecialidadStatusResponses = {
+  /**
+   * OK
+   */
+  200: EspecialidadResponse;
+};
+
+export type SetEspecialidadStatusResponse =
+  SetEspecialidadStatusResponses[keyof SetEspecialidadStatusResponses];
+
+export type UpdateServicioData = {
+  body: ServicioRequest;
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/api/catalogo/servicios/{id}';
+};
+
+export type UpdateServicioErrors = {
+  /**
+   * Bad Request
+   */
+  400: HttpValidationProblemDetails;
+  /**
+   * Unauthorized
+   */
+  401: ProblemDetails;
+  /**
+   * Forbidden
+   */
+  403: ProblemDetails;
+  /**
+   * Not Found
+   */
+  404: ProblemDetails;
+  /**
+   * Conflict
+   */
+  409: ProblemDetails;
+};
+
+export type UpdateServicioError = UpdateServicioErrors[keyof UpdateServicioErrors];
+
+export type UpdateServicioResponses = {
+  /**
+   * OK
+   */
+  200: ServicioResponse;
+};
+
+export type UpdateServicioResponse = UpdateServicioResponses[keyof UpdateServicioResponses];
+
+export type SetServicioStatusData = {
+  body: CatalogoStatusRequest;
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/api/catalogo/servicios/{id}/status';
+};
+
+export type SetServicioStatusErrors = {
+  /**
+   * Bad Request
+   */
+  400: ProblemDetails;
+  /**
+   * Unauthorized
+   */
+  401: ProblemDetails;
+  /**
+   * Forbidden
+   */
+  403: ProblemDetails;
+  /**
+   * Not Found
+   */
+  404: ProblemDetails;
+  /**
+   * Conflict
+   */
+  409: ProblemDetails;
+};
+
+export type SetServicioStatusError = SetServicioStatusErrors[keyof SetServicioStatusErrors];
+
+export type SetServicioStatusResponses = {
+  /**
+   * OK
+   */
+  200: ServicioResponse;
+};
+
+export type SetServicioStatusResponse =
+  SetServicioStatusResponses[keyof SetServicioStatusResponses];

@@ -176,6 +176,71 @@ namespace MouseDent.Infrastructure.Persistence.Migrations
                     b.ToTable("StaffAccessLinks", (string)null);
                 });
 
+            modelBuilder.Entity("MouseDent.Domain.Catalogo.Especialidad", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("NormalizedName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("NormalizedName")
+                        .IsUnique();
+
+                    b.ToTable("Especialidades", (string)null);
+                });
+
+            modelBuilder.Entity("MouseDent.Domain.Catalogo.Servicio", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("EspecialidadId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("NormalizedName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EspecialidadId", "NormalizedName")
+                        .IsUnique();
+
+                    b.ToTable("Servicios", (string)null);
+                });
+
             modelBuilder.Entity("MouseDent.Domain.Locales.Local", b =>
                 {
                     b.Property<Guid>("Id")
@@ -381,6 +446,15 @@ namespace MouseDent.Infrastructure.Persistence.Migrations
                         .WithMany()
                         .HasForeignKey("AccountId")
                         .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("MouseDent.Domain.Catalogo.Servicio", b =>
+                {
+                    b.HasOne("MouseDent.Domain.Catalogo.Especialidad", null)
+                        .WithMany()
+                        .HasForeignKey("EspecialidadId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
 

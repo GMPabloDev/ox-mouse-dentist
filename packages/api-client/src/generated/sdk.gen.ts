@@ -10,9 +10,15 @@ import {
 } from './client';
 import { client } from './client.gen';
 import type {
+  CreateEspecialidadData,
+  CreateEspecialidadErrors,
+  CreateEspecialidadResponses,
   CreateLocalData,
   CreateLocalErrors,
   CreateLocalResponses,
+  CreateServicioData,
+  CreateServicioErrors,
+  CreateServicioResponses,
   CreateStaffAccountData,
   CreateStaffAccountErrors,
   CreateStaffAccountResponses,
@@ -22,9 +28,15 @@ import type {
   GetLocalPhotoData,
   GetLocalPhotoErrors,
   GetLocalPhotoResponses,
+  ListEspecialidadesData,
+  ListEspecialidadesErrors,
+  ListEspecialidadesResponses,
   ListLocalesData,
   ListLocalesErrors,
   ListLocalesResponses,
+  ListServiciosData,
+  ListServiciosErrors,
+  ListServiciosResponses,
   ListStaffAccountsData,
   ListStaffAccountsErrors,
   ListStaffAccountsResponses,
@@ -40,15 +52,27 @@ import type {
   ResetPasswordData,
   ResetPasswordErrors,
   ResetPasswordResponses,
+  SetEspecialidadStatusData,
+  SetEspecialidadStatusErrors,
+  SetEspecialidadStatusResponses,
   SetLocalStatusData,
   SetLocalStatusErrors,
   SetLocalStatusResponses,
+  SetServicioStatusData,
+  SetServicioStatusErrors,
+  SetServicioStatusResponses,
   SetStaffAccountStatusData,
   SetStaffAccountStatusErrors,
   SetStaffAccountStatusResponses,
+  UpdateEspecialidadData,
+  UpdateEspecialidadErrors,
+  UpdateEspecialidadResponses,
   UpdateLocalData,
   UpdateLocalErrors,
   UpdateLocalResponses,
+  UpdateServicioData,
+  UpdateServicioErrors,
+  UpdateServicioResponses,
   UpdateStaffAccountData,
   UpdateStaffAccountErrors,
   UpdateStaffAccountResponses,
@@ -292,6 +316,122 @@ export const setLocalStatus = <ThrowOnError extends boolean = false>(
   (options.client ?? client).patch<SetLocalStatusResponses, SetLocalStatusErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/locales/{id}/status',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+export const listEspecialidades = <ThrowOnError extends boolean = false>(
+  options?: Options<ListEspecialidadesData, ThrowOnError>,
+): RequestResult<ListEspecialidadesResponses, ListEspecialidadesErrors, ThrowOnError> =>
+  (options?.client ?? client).get<
+    ListEspecialidadesResponses,
+    ListEspecialidadesErrors,
+    ThrowOnError
+  >({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/catalogo/especialidades',
+    ...options,
+  });
+
+export const createEspecialidad = <ThrowOnError extends boolean = false>(
+  options: Options<CreateEspecialidadData, ThrowOnError>,
+): RequestResult<CreateEspecialidadResponses, CreateEspecialidadErrors, ThrowOnError> =>
+  (options.client ?? client).post<
+    CreateEspecialidadResponses,
+    CreateEspecialidadErrors,
+    ThrowOnError
+  >({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/catalogo/especialidades',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+export const listServicios = <ThrowOnError extends boolean = false>(
+  options?: Options<ListServiciosData, ThrowOnError>,
+): RequestResult<ListServiciosResponses, ListServiciosErrors, ThrowOnError> =>
+  (options?.client ?? client).get<ListServiciosResponses, ListServiciosErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/catalogo/servicios',
+    ...options,
+  });
+
+export const createServicio = <ThrowOnError extends boolean = false>(
+  options: Options<CreateServicioData, ThrowOnError>,
+): RequestResult<CreateServicioResponses, CreateServicioErrors, ThrowOnError> =>
+  (options.client ?? client).post<CreateServicioResponses, CreateServicioErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/catalogo/servicios',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+export const updateEspecialidad = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateEspecialidadData, ThrowOnError>,
+): RequestResult<UpdateEspecialidadResponses, UpdateEspecialidadErrors, ThrowOnError> =>
+  (options.client ?? client).put<
+    UpdateEspecialidadResponses,
+    UpdateEspecialidadErrors,
+    ThrowOnError
+  >({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/catalogo/especialidades/{id}',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+export const setEspecialidadStatus = <ThrowOnError extends boolean = false>(
+  options: Options<SetEspecialidadStatusData, ThrowOnError>,
+): RequestResult<SetEspecialidadStatusResponses, SetEspecialidadStatusErrors, ThrowOnError> =>
+  (options.client ?? client).patch<
+    SetEspecialidadStatusResponses,
+    SetEspecialidadStatusErrors,
+    ThrowOnError
+  >({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/catalogo/especialidades/{id}/status',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+export const updateServicio = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateServicioData, ThrowOnError>,
+): RequestResult<UpdateServicioResponses, UpdateServicioErrors, ThrowOnError> =>
+  (options.client ?? client).put<UpdateServicioResponses, UpdateServicioErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/catalogo/servicios/{id}',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+export const setServicioStatus = <ThrowOnError extends boolean = false>(
+  options: Options<SetServicioStatusData, ThrowOnError>,
+): RequestResult<SetServicioStatusResponses, SetServicioStatusErrors, ThrowOnError> =>
+  (options.client ?? client).patch<
+    SetServicioStatusResponses,
+    SetServicioStatusErrors,
+    ThrowOnError
+  >({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/catalogo/servicios/{id}/status',
     ...options,
     headers: {
       'Content-Type': 'application/json',

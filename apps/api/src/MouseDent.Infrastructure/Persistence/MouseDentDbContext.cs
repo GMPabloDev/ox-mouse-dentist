@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using MouseDent.Domain.Auth;
+using MouseDent.Domain.Catalogo;
 using MouseDent.Domain.Locales;
 using MouseDent.Infrastructure.Auth;
 
@@ -14,6 +15,10 @@ namespace MouseDent.Infrastructure.Persistence;
 public sealed class MouseDentDbContext(DbContextOptions<MouseDentDbContext> options)
     : IdentityDbContext<StaffUser, IdentityRole<Guid>, Guid>(options)
 {
+    public DbSet<Especialidad> Especialidades => Set<Especialidad>();
+
+    public DbSet<Servicio> Servicios => Set<Servicio>();
+
     public DbSet<Local> Locales => Set<Local>();
 
     public DbSet<StaffAccessLink> StaffAccessLinks => Set<StaffAccessLink>();

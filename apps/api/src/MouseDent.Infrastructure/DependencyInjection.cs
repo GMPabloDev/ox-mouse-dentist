@@ -8,8 +8,10 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using MouseDent.Application.Auth;
+using MouseDent.Application.Catalogo;
 using MouseDent.Application.Locales;
 using MouseDent.Infrastructure.Auth;
+using MouseDent.Infrastructure.Catalogo;
 using MouseDent.Infrastructure.Locales;
 using MouseDent.Infrastructure.Persistence;
 
@@ -72,6 +74,7 @@ public static class DependencyInjection
         services.AddHostedService<LocalPhotoStorageInitializationService>();
 
         services.AddScoped<ILocales, EfLocales>();
+        services.AddScoped<ICatalogo, EfCatalogo>();
 
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer();
