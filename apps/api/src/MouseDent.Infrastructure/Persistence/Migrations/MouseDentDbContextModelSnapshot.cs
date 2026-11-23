@@ -389,6 +389,68 @@ namespace MouseDent.Infrastructure.Persistence.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
+            modelBuilder.Entity("MouseDent.Infrastructure.Profesionales.ProfesionalEspecialidad", b =>
+                {
+                    b.Property<Guid>("ProfesionalId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("EspecialidadId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("ProfesionalId", "EspecialidadId");
+
+                    b.HasIndex("EspecialidadId");
+
+                    b.ToTable("ProfesionalEspecialidades", (string)null);
+                });
+
+            modelBuilder.Entity("MouseDent.Infrastructure.Profesionales.ProfesionalGuardado", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Colegiatura")
+                        .HasMaxLength(30)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ColegiaturaNormalizada")
+                        .HasMaxLength(30)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid>("StaffAccountId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ColegiaturaNormalizada")
+                        .IsUnique()
+                        .HasFilter("\"ColegiaturaNormalizada\" IS NOT NULL");
+
+                    b.HasIndex("StaffAccountId")
+                        .IsUnique();
+
+                    b.ToTable("Profesionales", (string)null);
+                });
+
+            modelBuilder.Entity("MouseDent.Infrastructure.Profesionales.ProfesionalLocal", b =>
+                {
+                    b.Property<Guid>("ProfesionalId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("LocalId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("ProfesionalId", "LocalId");
+
+                    b.HasIndex("LocalId");
+
+                    b.ToTable("ProfesionalLocales", (string)null);
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>
                 {
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole<System.Guid>", null)
@@ -475,9 +537,59 @@ namespace MouseDent.Infrastructure.Persistence.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("MouseDent.Infrastructure.Profesionales.ProfesionalEspecialidad", b =>
+                {
+                    b.HasOne("MouseDent.Domain.Catalogo.Especialidad", null)
+                        .WithMany()
+                        .HasForeignKey("EspecialidadId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("MouseDent.Infrastructure.Profesionales.ProfesionalGuardado", "Profesional")
+                        .WithMany("Especialidades")
+                        .HasForeignKey("ProfesionalId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Profesional");
+                });
+
+            modelBuilder.Entity("MouseDent.Infrastructure.Profesionales.ProfesionalGuardado", b =>
+                {
+                    b.HasOne("MouseDent.Infrastructure.Auth.StaffUser", null)
+                        .WithOne()
+                        .HasForeignKey("MouseDent.Infrastructure.Profesionales.ProfesionalGuardado", "StaffAccountId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("MouseDent.Infrastructure.Profesionales.ProfesionalLocal", b =>
+                {
+                    b.HasOne("MouseDent.Domain.Locales.Local", null)
+                        .WithMany()
+                        .HasForeignKey("LocalId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("MouseDent.Infrastructure.Profesionales.ProfesionalGuardado", "Profesional")
+                        .WithMany("Locales")
+                        .HasForeignKey("ProfesionalId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Profesional");
+                });
+
             modelBuilder.Entity("MouseDent.Infrastructure.Auth.StaffUser", b =>
                 {
                     b.Navigation("Assignments");
+                });
+
+            modelBuilder.Entity("MouseDent.Infrastructure.Profesionales.ProfesionalGuardado", b =>
+                {
+                    b.Navigation("Especialidades");
+
+                    b.Navigation("Locales");
                 });
 #pragma warning restore 612, 618
         }

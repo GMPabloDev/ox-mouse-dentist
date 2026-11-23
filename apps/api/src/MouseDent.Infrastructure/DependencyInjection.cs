@@ -10,10 +10,12 @@ using Microsoft.IdentityModel.Tokens;
 using MouseDent.Application.Auth;
 using MouseDent.Application.Catalogo;
 using MouseDent.Application.Locales;
+using MouseDent.Domain.Profesionales;
 using MouseDent.Infrastructure.Auth;
 using MouseDent.Infrastructure.Catalogo;
 using MouseDent.Infrastructure.Locales;
 using MouseDent.Infrastructure.Persistence;
+using MouseDent.Infrastructure.Profesionales;
 
 namespace MouseDent.Infrastructure;
 
@@ -75,6 +77,7 @@ public static class DependencyInjection
 
         services.AddScoped<ILocales, EfLocales>();
         services.AddScoped<ICatalogo, EfCatalogo>();
+        services.AddScoped<IProfesionales, EfProfesionales>();
 
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer();

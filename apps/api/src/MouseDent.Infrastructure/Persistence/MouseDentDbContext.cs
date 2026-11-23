@@ -5,6 +5,7 @@ using MouseDent.Domain.Auth;
 using MouseDent.Domain.Catalogo;
 using MouseDent.Domain.Locales;
 using MouseDent.Infrastructure.Auth;
+using MouseDent.Infrastructure.Profesionales;
 
 namespace MouseDent.Infrastructure.Persistence;
 
@@ -22,6 +23,12 @@ public sealed class MouseDentDbContext(DbContextOptions<MouseDentDbContext> opti
     public DbSet<Local> Locales => Set<Local>();
 
     public DbSet<StaffAccessLink> StaffAccessLinks => Set<StaffAccessLink>();
+
+    public DbSet<ProfesionalGuardado> Profesionales => Set<ProfesionalGuardado>();
+
+    public DbSet<ProfesionalEspecialidad> ProfesionalEspecialidades => Set<ProfesionalEspecialidad>();
+
+    public DbSet<ProfesionalLocal> ProfesionalLocales => Set<ProfesionalLocal>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
