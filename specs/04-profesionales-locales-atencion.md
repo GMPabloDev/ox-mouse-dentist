@@ -64,6 +64,10 @@ cambian.
 - La ficha y la cuenta se guardan en una sola operación. Si el envío de la invitación falla después
   del guardado, la ficha queda creada con la cuenta pendiente y la interfaz informa el fallo; el
   administrador puede reenviar la invitación desde la ficha.
+- El fallo del último envío de invitación se guarda en la cuenta y dura hasta que un envío se
+  entrega, la cuenta establece su contraseña o cambia su correo. La lista muestra la cuenta
+  pendiente con correo fallido de forma distinta a la pendiente normal, y el resumen cuenta los
+  correos sin enviar. Registrar el fallo no cambia la versión de sesión de la cuenta.
 - Desde la ficha, administración ve el estado de la cuenta (pendiente, activa o inactiva) y puede
   reenviar una invitación pendiente. Cualquier otro cambio de la cuenta se hace en el módulo de
   personal.
@@ -198,7 +202,7 @@ regla `/prototypes/`, así que esta referencia es local y no se recupera desde e
 2. Implementar el vínculo a una cuenta existente con perfil `Profesional` y sin ficha, incluido el
    rechazo cuando el correo pertenece a otro perfil o a una ficha ya vinculada.
 3. Implementar el reenvío de la invitación pendiente desde la ficha y el estado de la cuenta en la
-   lista.
+   lista, incluido el fallo guardado del último envío.
 4. Comprobar con pruebas de integración el fallo de envío sin datos parciales, el alta concurrente
    con el mismo correo y el vínculo a cuentas pendientes y a cuentas con contraseña establecida.
 
@@ -248,7 +252,8 @@ regla `/prototypes/`, así que esta referencia es local y no se recupera desde e
 - [ ] Toda ficha tiene una cuenta de perfil `Profesional` y toda cuenta tiene como máximo una ficha.
       La API impide ambos incumplimientos.
 - [ ] El alta crea la cuenta pendiente y envía la invitación con el flujo de SPEC 02. Si el envío
-      falla, la ficha queda creada, la interfaz informa el fallo y el reenvío funciona.
+      falla, la ficha queda creada, la interfaz informa el fallo, la lista conserva la marca de
+      correo fallido y el reenvío funciona.
 - [ ] Un alta con un correo de una cuenta `Profesional` sin ficha vincula esa cuenta. Un correo de
       otro perfil o de una cuenta con ficha se rechaza sin datos parciales.
 - [ ] El módulo de personal no ofrece el perfil `Profesional`, y la API rechaza crearlo, asignarlo o
@@ -286,6 +291,10 @@ regla `/prototypes/`, así que esta referencia es local y no se recupera desde e
   dos fuentes producen contradicciones y reglas de sesión repetidas.
 - **El alta crea la cuenta.** Se descarta exigir dos pasos (crear la cuenta en personal y después
   vincularla), porque el recorrido real de administración es dar de alta a la persona una vez.
+- **El fallo de la invitación se guarda en la cuenta.** Se descarta dejarlo solo en la respuesta del
+  alta: la lista tiene que distinguir la cuenta pendiente con correo fallido después de recargar y
+  el resumen cuenta los correos sin enviar. Vive en la cuenta porque la invitación es de la cuenta,
+  no de la ficha, y no altera la versión de sesión.
 - **Perfil `Profesional` fuera del módulo de personal.** Se descarta mantener el perfil como opción
   del alta: crearía cuentas sin ficha que nadie puede usar y dos caminos para el mismo dato. Las
   cuentas Profesional heredadas de datos de prueba se vinculan por correo al dar de alta.
