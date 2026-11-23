@@ -35,6 +35,29 @@ export type CreateLocalForm = {
   photo?: null | IFormFile;
 };
 
+export type CreateProfesionalForm = {
+  /**
+   * Correo de la cuenta. Único entre todas, incluidas las inactivas y pendientes. Si ya pertenece a una cuenta Profesional sin ficha, el alta la vincula.
+   */
+  email?: string;
+  /**
+   * Nombre visible de la persona, que se guarda en la cuenta.
+   */
+  displayName?: string;
+  /**
+   * Número de colegiatura opcional, de hasta 30 caracteres tras quitar los espacios de los extremos. Único entre todas las fichas, incluidas las inactivas.
+   */
+  colegiatura?: null | string;
+  /**
+   * Al menos una especialidad activa del catálogo.
+   */
+  especialidadIds?: null | Array<string>;
+  /**
+   * Al menos un local de atención activo.
+   */
+  localIds?: null | Array<string>;
+};
+
 export type CreateStaffAccountForm = {
   /**
    * Perfil único: Administrador o Recepcion. El perfil Profesional se asigna en el alta de profesionales, junto con la ficha.
@@ -153,6 +176,90 @@ export type ProblemDetails = {
   instance?: null | string;
 };
 
+export type ProfesionalEspecialidadResponse = {
+  /**
+   * Identificador de la especialidad.
+   */
+  id: string;
+  /**
+   * Nombre de la especialidad.
+   */
+  name: string;
+  /**
+   * Indica si la especialidad sigue activa. Una asignación inactiva se conserva y se muestra marcada.
+   */
+  isActive: boolean;
+};
+
+export type ProfesionalLocalResponse = {
+  /**
+   * Identificador del local.
+   */
+  id: string;
+  /**
+   * Nombre del local.
+   */
+  name: string;
+  /**
+   * Indica si el local sigue activo. Una asignación inactiva se conserva y se muestra marcada.
+   */
+  isActive: boolean;
+};
+
+export type ProfesionalResponse = {
+  /**
+   * Identificador de la ficha.
+   */
+  id: string;
+  /**
+   * Identificador de la cuenta vinculada.
+   */
+  staffAccountId: string;
+  /**
+   * Nombre visible de la cuenta.
+   */
+  displayName: string;
+  /**
+   * Correo de la cuenta. Único entre todas, incluidas las inactivas.
+   */
+  email: string;
+  /**
+   * Teléfono de la cuenta, opcional.
+   */
+  phone: null | string;
+  /**
+   * Número de colegiatura de la ficha, opcional.
+   */
+  colegiatura: null | string;
+  /**
+   * Estado de la ficha: true activa, false inactiva. Es independiente del estado de la cuenta.
+   */
+  isActive: boolean;
+  /**
+   * Estado de la cuenta: Pendiente, Activa o Inactiva.
+   */
+  accountStatus: StaffAccountState;
+  /**
+   * Indica que el último envío de la invitación falló y la cuenta sigue pendiente.
+   */
+  invitationFailed: boolean;
+  /**
+   * Especialidades asignadas, con su estado actual en el catálogo.
+   */
+  especialidades: Array<ProfesionalEspecialidadResponse>;
+  /**
+   * Locales de atención asignados, con su estado actual.
+   */
+  locales: Array<ProfesionalLocalResponse>;
+};
+
+export type ProfesionalStatusRequest = {
+  /**
+   * true reactiva la ficha; false la desactiva conservando sus especialidades, sus locales y su cuenta.
+   */
+  isActive: boolean;
+};
+
 export type ResetPasswordRequest = {
   token: string;
   password: string;
@@ -234,6 +341,21 @@ export type UpdateLocalForm = {
    */
   schedule?: string;
   photo?: null | IFormFile;
+};
+
+export type UpdateProfesionalForm = {
+  /**
+   * Número de colegiatura opcional, de hasta 30 caracteres tras quitar los espacios de los extremos. Único entre todas las fichas, incluidas las inactivas.
+   */
+  colegiatura?: null | string;
+  /**
+   * Al menos una especialidad. Solo se pueden añadir activas; las ya asignadas se conservan aunque después se hayan desactivado.
+   */
+  especialidadIds?: null | Array<string>;
+  /**
+   * Al menos un local de atención. Solo se pueden añadir activos; los ya asignados se conservan aunque después se hayan desactivado.
+   */
+  localIds?: null | Array<string>;
 };
 
 export type UpdateStaffAccountForm = {
@@ -1073,3 +1195,250 @@ export type SetServicioStatusResponses = {
 
 export type SetServicioStatusResponse =
   SetServicioStatusResponses[keyof SetServicioStatusResponses];
+
+export type ListProfesionalesData = {
+  body?: never;
+  path?: never;
+  query?: {
+    search?: string;
+    especialidadId?: string;
+    localId?: string;
+    fichaActiva?: boolean;
+    accountStatus?: StaffAccountState;
+  };
+  url: '/api/profesionales';
+};
+
+export type ListProfesionalesErrors = {
+  /**
+   * Unauthorized
+   */
+  401: ProblemDetails;
+  /**
+   * Forbidden
+   */
+  403: ProblemDetails;
+};
+
+export type ListProfesionalesError = ListProfesionalesErrors[keyof ListProfesionalesErrors];
+
+export type ListProfesionalesResponses = {
+  /**
+   * OK
+   */
+  200: Array<ProfesionalResponse>;
+};
+
+export type ListProfesionalesResponse =
+  ListProfesionalesResponses[keyof ListProfesionalesResponses];
+
+export type CreateProfesionalData = {
+  body: CreateProfesionalForm;
+  path?: never;
+  query?: never;
+  url: '/api/profesionales';
+};
+
+export type CreateProfesionalErrors = {
+  /**
+   * Bad Request
+   */
+  400: HttpValidationProblemDetails;
+  /**
+   * Unauthorized
+   */
+  401: ProblemDetails;
+  /**
+   * Forbidden
+   */
+  403: ProblemDetails;
+  /**
+   * Conflict
+   */
+  409: ProblemDetails;
+  /**
+   * Bad Gateway
+   */
+  502: ProblemDetails;
+};
+
+export type CreateProfesionalError = CreateProfesionalErrors[keyof CreateProfesionalErrors];
+
+export type CreateProfesionalResponses = {
+  /**
+   * Created
+   */
+  201: ProfesionalResponse;
+};
+
+export type CreateProfesionalResponse =
+  CreateProfesionalResponses[keyof CreateProfesionalResponses];
+
+export type GetProfesionalData = {
+  body?: never;
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/api/profesionales/{id}';
+};
+
+export type GetProfesionalErrors = {
+  /**
+   * Unauthorized
+   */
+  401: ProblemDetails;
+  /**
+   * Forbidden
+   */
+  403: ProblemDetails;
+  /**
+   * Not Found
+   */
+  404: ProblemDetails;
+};
+
+export type GetProfesionalError = GetProfesionalErrors[keyof GetProfesionalErrors];
+
+export type GetProfesionalResponses = {
+  /**
+   * OK
+   */
+  200: ProfesionalResponse;
+};
+
+export type GetProfesionalResponse = GetProfesionalResponses[keyof GetProfesionalResponses];
+
+export type UpdateProfesionalData = {
+  body: UpdateProfesionalForm;
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/api/profesionales/{id}';
+};
+
+export type UpdateProfesionalErrors = {
+  /**
+   * Bad Request
+   */
+  400: HttpValidationProblemDetails;
+  /**
+   * Unauthorized
+   */
+  401: ProblemDetails;
+  /**
+   * Forbidden
+   */
+  403: ProblemDetails;
+  /**
+   * Not Found
+   */
+  404: ProblemDetails;
+  /**
+   * Conflict
+   */
+  409: ProblemDetails;
+};
+
+export type UpdateProfesionalError = UpdateProfesionalErrors[keyof UpdateProfesionalErrors];
+
+export type UpdateProfesionalResponses = {
+  /**
+   * OK
+   */
+  200: ProfesionalResponse;
+};
+
+export type UpdateProfesionalResponse =
+  UpdateProfesionalResponses[keyof UpdateProfesionalResponses];
+
+export type SetProfesionalStatusData = {
+  body: ProfesionalStatusRequest;
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/api/profesionales/{id}/status';
+};
+
+export type SetProfesionalStatusErrors = {
+  /**
+   * Bad Request
+   */
+  400: ProblemDetails;
+  /**
+   * Unauthorized
+   */
+  401: ProblemDetails;
+  /**
+   * Forbidden
+   */
+  403: ProblemDetails;
+  /**
+   * Not Found
+   */
+  404: ProblemDetails;
+  /**
+   * Conflict
+   */
+  409: ProblemDetails;
+};
+
+export type SetProfesionalStatusError =
+  SetProfesionalStatusErrors[keyof SetProfesionalStatusErrors];
+
+export type SetProfesionalStatusResponses = {
+  /**
+   * OK
+   */
+  200: ProfesionalResponse;
+};
+
+export type SetProfesionalStatusResponse =
+  SetProfesionalStatusResponses[keyof SetProfesionalStatusResponses];
+
+export type ResendProfesionalInvitationData = {
+  body?: never;
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/api/profesionales/{id}/invitation';
+};
+
+export type ResendProfesionalInvitationErrors = {
+  /**
+   * Unauthorized
+   */
+  401: ProblemDetails;
+  /**
+   * Forbidden
+   */
+  403: ProblemDetails;
+  /**
+   * Not Found
+   */
+  404: ProblemDetails;
+  /**
+   * Conflict
+   */
+  409: ProblemDetails;
+  /**
+   * Bad Gateway
+   */
+  502: ProblemDetails;
+};
+
+export type ResendProfesionalInvitationError =
+  ResendProfesionalInvitationErrors[keyof ResendProfesionalInvitationErrors];
+
+export type ResendProfesionalInvitationResponses = {
+  /**
+   * OK
+   */
+  200: ProfesionalResponse;
+};
+
+export type ResendProfesionalInvitationResponse =
+  ResendProfesionalInvitationResponses[keyof ResendProfesionalInvitationResponses];

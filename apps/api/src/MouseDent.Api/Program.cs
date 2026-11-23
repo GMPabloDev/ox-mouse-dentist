@@ -4,6 +4,7 @@ using MouseDent.Api.Auth;
 using MouseDent.Api.Catalogo;
 using MouseDent.Api.Common;
 using MouseDent.Api.Locales;
+using MouseDent.Api.Profesionales;
 using MouseDent.Application;
 using MouseDent.Infrastructure;
 
@@ -54,6 +55,7 @@ app.MapAuthEndpoints();
 app.MapStaffAccountEndpoints();
 app.MapLocalEndpoints();
 app.MapCatalogoEndpoints();
+app.MapProfesionalEndpoints();
 
 app.Run();
 

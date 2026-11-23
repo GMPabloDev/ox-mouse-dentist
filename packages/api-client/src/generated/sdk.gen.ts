@@ -16,6 +16,9 @@ import type {
   CreateLocalData,
   CreateLocalErrors,
   CreateLocalResponses,
+  CreateProfesionalData,
+  CreateProfesionalErrors,
+  CreateProfesionalResponses,
   CreateServicioData,
   CreateServicioErrors,
   CreateServicioResponses,
@@ -28,12 +31,18 @@ import type {
   GetLocalPhotoData,
   GetLocalPhotoErrors,
   GetLocalPhotoResponses,
+  GetProfesionalData,
+  GetProfesionalErrors,
+  GetProfesionalResponses,
   ListEspecialidadesData,
   ListEspecialidadesErrors,
   ListEspecialidadesResponses,
   ListLocalesData,
   ListLocalesErrors,
   ListLocalesResponses,
+  ListProfesionalesData,
+  ListProfesionalesErrors,
+  ListProfesionalesResponses,
   ListServiciosData,
   ListServiciosErrors,
   ListServiciosResponses,
@@ -46,6 +55,9 @@ import type {
   RequestPasswordRecoveryData,
   RequestPasswordRecoveryErrors,
   RequestPasswordRecoveryResponses,
+  ResendProfesionalInvitationData,
+  ResendProfesionalInvitationErrors,
+  ResendProfesionalInvitationResponses,
   ResendStaffInvitationData,
   ResendStaffInvitationErrors,
   ResendStaffInvitationResponses,
@@ -58,6 +70,9 @@ import type {
   SetLocalStatusData,
   SetLocalStatusErrors,
   SetLocalStatusResponses,
+  SetProfesionalStatusData,
+  SetProfesionalStatusErrors,
+  SetProfesionalStatusResponses,
   SetServicioStatusData,
   SetServicioStatusErrors,
   SetServicioStatusResponses,
@@ -70,6 +85,9 @@ import type {
   UpdateLocalData,
   UpdateLocalErrors,
   UpdateLocalResponses,
+  UpdateProfesionalData,
+  UpdateProfesionalErrors,
+  UpdateProfesionalResponses,
   UpdateServicioData,
   UpdateServicioErrors,
   UpdateServicioResponses,
@@ -437,4 +455,110 @@ export const setServicioStatus = <ThrowOnError extends boolean = false>(
       'Content-Type': 'application/json',
       ...options.headers,
     },
+  });
+
+/**
+ * Lista las fichas de los profesionales con el estado de su cuenta y sus asignaciones.
+ */
+export const listProfesionales = <ThrowOnError extends boolean = false>(
+  options?: Options<ListProfesionalesData, ThrowOnError>,
+): RequestResult<ListProfesionalesResponses, ListProfesionalesErrors, ThrowOnError> =>
+  (options?.client ?? client).get<
+    ListProfesionalesResponses,
+    ListProfesionalesErrors,
+    ThrowOnError
+  >({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/profesionales',
+    ...options,
+  });
+
+/**
+ * Crea la ficha con su cuenta pendiente y la invitación, o vincula una cuenta Profesional sin ficha.
+ */
+export const createProfesional = <ThrowOnError extends boolean = false>(
+  options: Options<CreateProfesionalData, ThrowOnError>,
+): RequestResult<CreateProfesionalResponses, CreateProfesionalErrors, ThrowOnError> =>
+  (options.client ?? client).post<
+    CreateProfesionalResponses,
+    CreateProfesionalErrors,
+    ThrowOnError
+  >({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/profesionales',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Devuelve la ficha de un profesional con el estado de su cuenta.
+ */
+export const getProfesional = <ThrowOnError extends boolean = false>(
+  options: Options<GetProfesionalData, ThrowOnError>,
+): RequestResult<GetProfesionalResponses, GetProfesionalErrors, ThrowOnError> =>
+  (options.client ?? client).get<GetProfesionalResponses, GetProfesionalErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/profesionales/{id}',
+    ...options,
+  });
+
+/**
+ * Edita la colegiatura, las especialidades y los locales de la ficha; no cambia los datos de la cuenta.
+ */
+export const updateProfesional = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateProfesionalData, ThrowOnError>,
+): RequestResult<UpdateProfesionalResponses, UpdateProfesionalErrors, ThrowOnError> =>
+  (options.client ?? client).put<UpdateProfesionalResponses, UpdateProfesionalErrors, ThrowOnError>(
+    {
+      security: [{ scheme: 'bearer', type: 'http' }],
+      url: '/api/profesionales/{id}',
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers,
+      },
+    },
+  );
+
+/**
+ * Activa o desactiva la ficha sin borrar sus especialidades, sus locales ni su cuenta.
+ */
+export const setProfesionalStatus = <ThrowOnError extends boolean = false>(
+  options: Options<SetProfesionalStatusData, ThrowOnError>,
+): RequestResult<SetProfesionalStatusResponses, SetProfesionalStatusErrors, ThrowOnError> =>
+  (options.client ?? client).patch<
+    SetProfesionalStatusResponses,
+    SetProfesionalStatusErrors,
+    ThrowOnError
+  >({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/profesionales/{id}/status',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Reenvía la invitación pendiente de la cuenta del profesional.
+ */
+export const resendProfesionalInvitation = <ThrowOnError extends boolean = false>(
+  options: Options<ResendProfesionalInvitationData, ThrowOnError>,
+): RequestResult<
+  ResendProfesionalInvitationResponses,
+  ResendProfesionalInvitationErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).post<
+    ResendProfesionalInvitationResponses,
+    ResendProfesionalInvitationErrors,
+    ThrowOnError
+  >({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/profesionales/{id}/invitation',
+    ...options,
   });

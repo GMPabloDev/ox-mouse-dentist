@@ -1646,6 +1646,524 @@
           }
         ]
       }
+    },
+    "/api/profesionales": {
+      "get": {
+        "tags": [
+          "Profesionales"
+        ],
+        "summary": "Lista las fichas de los profesionales con el estado de su cuenta y sus asignaciones.",
+        "operationId": "ListProfesionales",
+        "parameters": [
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "especialidadId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "localId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "fichaActiva",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "accountStatus",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/StaffAccountState"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ProfesionalResponse"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Bearer": [ ]
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Profesionales"
+        ],
+        "summary": "Crea la ficha con su cuenta pendiente y la invitación, o vincula una cuenta Profesional sin ficha.",
+        "operationId": "CreateProfesional",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProfesionalForm"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfesionalResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Bearer": [ ]
+          }
+        ]
+      }
+    },
+    "/api/profesionales/{id}": {
+      "get": {
+        "tags": [
+          "Profesionales"
+        ],
+        "summary": "Devuelve la ficha de un profesional con el estado de su cuenta.",
+        "operationId": "GetProfesional",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfesionalResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Bearer": [ ]
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "Profesionales"
+        ],
+        "summary": "Edita la colegiatura, las especialidades y los locales de la ficha; no cambia los datos de la cuenta.",
+        "operationId": "UpdateProfesional",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProfesionalForm"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfesionalResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Bearer": [ ]
+          }
+        ]
+      }
+    },
+    "/api/profesionales/{id}/status": {
+      "patch": {
+        "tags": [
+          "Profesionales"
+        ],
+        "summary": "Activa o desactiva la ficha sin borrar sus especialidades, sus locales ni su cuenta.",
+        "operationId": "SetProfesionalStatus",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfesionalStatusRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfesionalResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Bearer": [ ]
+          }
+        ]
+      }
+    },
+    "/api/profesionales/{id}/invitation": {
+      "post": {
+        "tags": [
+          "Profesionales"
+        ],
+        "summary": "Reenvía la invitación pendiente de la cuenta del profesional.",
+        "operationId": "ResendProfesionalInvitation",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfesionalResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Bearer": [ ]
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -1717,6 +2235,48 @@
                 "$ref": "#/components/schemas/IFormFile"
               }
             ]
+          }
+        }
+      },
+      "CreateProfesionalForm": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "Correo de la cuenta. Único entre todas, incluidas las inactivas y pendientes. Si ya pertenece a una cuenta Profesional sin ficha, el alta la vincula."
+          },
+          "displayName": {
+            "type": "string",
+            "description": "Nombre visible de la persona, que se guarda en la cuenta."
+          },
+          "colegiatura": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Número de colegiatura opcional, de hasta 30 caracteres tras quitar los espacios de los extremos. Único entre todas las fichas, incluidas las inactivas."
+          },
+          "especialidadIds": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Al menos una especialidad activa del catálogo."
+          },
+          "localIds": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Al menos un local de atención activo."
           }
         }
       },
@@ -2055,6 +2615,140 @@
           }
         }
       },
+      "ProfesionalEspecialidadResponse": {
+        "required": [
+          "id",
+          "name",
+          "isActive"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Identificador de la especialidad.",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "description": "Nombre de la especialidad."
+          },
+          "isActive": {
+            "type": "boolean",
+            "description": "Indica si la especialidad sigue activa. Una asignación inactiva se conserva y se muestra marcada."
+          }
+        }
+      },
+      "ProfesionalLocalResponse": {
+        "required": [
+          "id",
+          "name",
+          "isActive"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Identificador del local.",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "description": "Nombre del local."
+          },
+          "isActive": {
+            "type": "boolean",
+            "description": "Indica si el local sigue activo. Una asignación inactiva se conserva y se muestra marcada."
+          }
+        }
+      },
+      "ProfesionalResponse": {
+        "required": [
+          "id",
+          "staffAccountId",
+          "displayName",
+          "email",
+          "phone",
+          "colegiatura",
+          "isActive",
+          "accountStatus",
+          "invitationFailed",
+          "especialidades",
+          "locales"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Identificador de la ficha.",
+            "format": "uuid"
+          },
+          "staffAccountId": {
+            "type": "string",
+            "description": "Identificador de la cuenta vinculada.",
+            "format": "uuid"
+          },
+          "displayName": {
+            "type": "string",
+            "description": "Nombre visible de la cuenta."
+          },
+          "email": {
+            "type": "string",
+            "description": "Correo de la cuenta. Único entre todas, incluidas las inactivas."
+          },
+          "phone": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Teléfono de la cuenta, opcional."
+          },
+          "colegiatura": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Número de colegiatura de la ficha, opcional."
+          },
+          "isActive": {
+            "type": "boolean",
+            "description": "Estado de la ficha: true activa, false inactiva. Es independiente del estado de la cuenta."
+          },
+          "accountStatus": {
+            "description": "Estado de la cuenta: Pendiente, Activa o Inactiva.",
+            "$ref": "#/components/schemas/StaffAccountState"
+          },
+          "invitationFailed": {
+            "type": "boolean",
+            "description": "Indica que el último envío de la invitación falló y la cuenta sigue pendiente."
+          },
+          "especialidades": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProfesionalEspecialidadResponse"
+            },
+            "description": "Especialidades asignadas, con su estado actual en el catálogo."
+          },
+          "locales": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProfesionalLocalResponse"
+            },
+            "description": "Locales de atención asignados, con su estado actual."
+          }
+        }
+      },
+      "ProfesionalStatusRequest": {
+        "required": [
+          "isActive"
+        ],
+        "type": "object",
+        "properties": {
+          "isActive": {
+            "type": "boolean",
+            "description": "true reactiva la ficha; false la desactiva conservando sus especialidades, sus locales y su cuenta."
+          }
+        }
+      },
       "ResetPasswordRequest": {
         "required": [
           "token",
@@ -2229,6 +2923,40 @@
           }
         }
       },
+      "UpdateProfesionalForm": {
+        "type": "object",
+        "properties": {
+          "colegiatura": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Número de colegiatura opcional, de hasta 30 caracteres tras quitar los espacios de los extremos. Único entre todas las fichas, incluidas las inactivas."
+          },
+          "especialidadIds": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Al menos una especialidad. Solo se pueden añadir activas; las ya asignadas se conservan aunque después se hayan desactivado."
+          },
+          "localIds": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Al menos un local de atención. Solo se pueden añadir activos; los ya asignados se conservan aunque después se hayan desactivado."
+          }
+        }
+      },
       "UpdateStaffAccountForm": {
         "type": "object",
         "properties": {
@@ -2286,6 +3014,9 @@
     },
     {
       "name": "Catalogo"
+    },
+    {
+      "name": "Profesionales"
     }
   ]
 }

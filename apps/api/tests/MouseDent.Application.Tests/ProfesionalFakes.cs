@@ -45,10 +45,16 @@ internal sealed class FakeAltaStore : IAltasDeProfesionales
     }
 }
 
-/// <summary>Almacén de fichas en memoria para las lecturas del caso de uso.</summary>
+/// <summary>Almacén de fichas en memoria para las lecturas y las escrituras del caso de uso.</summary>
 internal sealed class FakeProfesionales(params Profesional[] stored) : IProfesionales
 {
     private readonly List<Profesional> _fichas = [.. stored];
+
+    /// <summary>Resultado que devuelve la escritura; solo <c>Guardado</c> conserva la ficha.</summary>
+    public ResultadoGuardadoProfesional SaveResult { get; init; } = ResultadoGuardadoProfesional.Guardado;
+
+    /// <summary>Fichas que la escritura aceptó, en orden.</summary>
+    public List<Profesional> Saved { get; } = [];
 
     public Task<Profesional?> BuscarAsync(Guid id, CancellationToken cancellationToken) =>
         Task.FromResult(_fichas.FirstOrDefault(ficha => ficha.Id == id));
@@ -65,8 +71,27 @@ internal sealed class FakeProfesionales(params Profesional[] stored) : IProfesio
 
     public Task<ResultadoGuardadoProfesional> GuardarAsync(
         Profesional profesional,
-        CancellationToken cancellationToken) =>
-        throw new NotSupportedException();
+        CancellationToken cancellationToken)
+    {
+        if (SaveResult is not ResultadoGuardadoProfesional.Guardado)
+        {
+            return Task.FromResult(SaveResult);
+        }
+
+        var index = _fichas.FindIndex(ficha => ficha.Id == profesional.Id);
+        if (index < 0)
+        {
+            _fichas.Add(profesional);
+        }
+        else
+        {
+            _fichas[index] = profesional;
+        }
+
+        Saved.Add(profesional);
+
+        return Task.FromResult(SaveResult);
+    }
 }
 
 /// <summary>Catálogo en memoria. Las pruebas del alta solo leen las especialidades.</summary>
@@ -99,6 +124,8 @@ internal sealed class FakeCatalogo(params Especialidad[] stored) : ICatalogo
 /// <summary>Listado en memoria. Registra el filtro recibido y devuelve las fichas configuradas.</summary>
 internal sealed class FakeListadoDeProfesionales(params ProfesionalResumen[] stored) : IListadoDeProfesionales
 {
+    private readonly ProfesionalResumen[] _resumenes = stored;
+
     public List<ProfesionalFiltro> Received { get; } = [];
 
     public Task<IReadOnlyList<ProfesionalResumen>> ListAsync(
@@ -107,8 +134,11 @@ internal sealed class FakeListadoDeProfesionales(params ProfesionalResumen[] sto
     {
         Received.Add(filtro);
 
-        return Task.FromResult<IReadOnlyList<ProfesionalResumen>>(stored);
+        return Task.FromResult<IReadOnlyList<ProfesionalResumen>>(_resumenes);
     }
+
+    public Task<ProfesionalResumen?> BuscarAsync(Guid id, CancellationToken cancellationToken) =>
+        Task.FromResult(_resumenes.FirstOrDefault(resumen => resumen.Id == id));
 }
 
 /// <summary>Especialidades y fichas con las que se construyen los casos de prueba del alta.</summary>

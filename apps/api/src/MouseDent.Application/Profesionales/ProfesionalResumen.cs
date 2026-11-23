@@ -56,4 +56,10 @@ public interface IListadoDeProfesionales
     Task<IReadOnlyList<ProfesionalResumen>> ListAsync(
         ProfesionalFiltro filtro,
         CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Ficha con ese identificador, con la misma forma que la lista, o <c>null</c>
+    /// cuando no existe. Una cuenta sin ficha nunca aparece.
+    /// </summary>
+    Task<ProfesionalResumen?> BuscarAsync(Guid id, CancellationToken cancellationToken);
 }
