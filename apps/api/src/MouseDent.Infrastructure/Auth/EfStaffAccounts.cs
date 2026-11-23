@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Identity;
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using MouseDent.Application.Auth;
 using MouseDent.Domain.Auth;
@@ -86,7 +85,7 @@ public sealed class EfStaffAccounts(UserManager<StaffUser> users, MouseDentDbCon
 
         if (!string.IsNullOrWhiteSpace(search))
         {
-            var pattern = SearchPattern(search.Trim());
+            var pattern = TextSearch.Contains(search.Trim());
             query = query.Where(user =>
                 EF.Functions.Like(user.DisplayName, pattern, "\\")
                 || EF.Functions.Like(user.Email!, pattern, "\\"));
@@ -109,23 +108,7 @@ public sealed class EfStaffAccounts(UserManager<StaffUser> users, MouseDentDbCon
             return StaffSaveResult.LocalsUnavailable;
         }
 
-        var user = new StaffUser
-        {
-            Id = account.Id,
-
-            // El correo identifica la cuenta y se valida en el borde. El nombre de
-            // usuario solo es el identificador interno de Identity: usar el correo
-            // rechazaría direcciones válidas con tildes o eñes.
-            UserName = account.Id.ToString(),
-            Email = account.Email,
-            EmailConfirmed = true,
-            DisplayName = account.DisplayName,
-            PhoneNumber = account.Phone,
-            Profile = account.Profile,
-            IsActive = account.IsActive,
-            PasswordEstablishedAt = account.PasswordEstablishedAt,
-            SessionVersion = account.SessionVersion,
-        };
+        var user = StaffUserFactory.Nuevo(account);
 
         IdentityResult created;
         try
@@ -133,7 +116,7 @@ public sealed class EfStaffAccounts(UserManager<StaffUser> users, MouseDentDbCon
             // Sin contraseña: la cuenta queda pendiente hasta que la persona la establezca.
             created = await users.CreateAsync(user);
         }
-        catch (DbUpdateException exception) when (IsUniqueViolation(exception))
+        catch (DbUpdateException exception) when (SqliteConstraint.IsViolation(exception))
         {
             return StaffSaveResult.DuplicateEmail;
         }
@@ -186,12 +169,20 @@ public sealed class EfStaffAccounts(UserManager<StaffUser> users, MouseDentDbCon
             return StaffSaveResult.LastAdministrator;
         }
 
-        var invalidateLinks = !account.IsActive || !string.Equals(user.Email, account.Email, StringComparison.OrdinalIgnoreCase);
+        var emailChanged = !string.Equals(user.Email, account.Email, StringComparison.OrdinalIgnoreCase);
+        var invalidateLinks = !account.IsActive || emailChanged;
         if (invalidateLinks)
         {
             await database.Set<StaffAccessLink>()
                 .Where(link => link.AccountId == account.Id && link.UsedAt == null)
                 .ExecuteDeleteAsync(cancellationToken);
+        }
+
+        if (emailChanged)
+        {
+            // El correo nuevo exige establecer otra contraseña, así que el fallo del
+            // envío anterior deja de aplicar.
+            user.InvitationFailedAt = null;
         }
 
         user.Email = account.Email;
@@ -209,7 +200,7 @@ public sealed class EfStaffAccounts(UserManager<StaffUser> users, MouseDentDbCon
         {
             updated = await users.UpdateAsync(user);
         }
-        catch (DbUpdateException exception) when (IsUniqueViolation(exception))
+        catch (DbUpdateException exception) when (SqliteConstraint.IsViolation(exception))
         {
             return StaffSaveResult.DuplicateEmail;
         }
@@ -224,6 +215,29 @@ public sealed class EfStaffAccounts(UserManager<StaffUser> users, MouseDentDbCon
 
         return StaffSaveResult.Saved;
     }
+
+    public async Task RecordInvitationFailureAsync(
+        Guid accountId,
+        DateTime failedAt,
+        CancellationToken cancellationToken)
+    {
+        // Actualización acotada: no toca la versión de sesión ni pasa por la
+        // protección del último administrador, porque no es una edición de la cuenta.
+        // La marca solo aplica a una cuenta pendiente; si ya estableció su contraseña,
+        // la condición no escribe.
+        await database.Users
+            .Where(user => user.Id == accountId && user.PasswordEstablishedAt == null)
+            .ExecuteUpdateAsync(
+                setters => setters.SetProperty(user => user.InvitationFailedAt, failedAt),
+                cancellationToken);
+    }
+
+    public Task ClearInvitationFailureAsync(Guid accountId, CancellationToken cancellationToken) =>
+        database.Users
+            .Where(user => user.Id == accountId && user.InvitationFailedAt != null)
+            .ExecuteUpdateAsync(
+                setters => setters.SetProperty(user => user.InvitationFailedAt, (DateTime?)null),
+                cancellationToken);
 
     private async Task<bool> NewAssignmentsAreActiveAsync(
         IReadOnlyList<Guid> requested, IEnumerable<Guid> existing, CancellationToken cancellationToken)
@@ -275,22 +289,7 @@ public sealed class EfStaffAccounts(UserManager<StaffUser> users, MouseDentDbCon
             user.Assignments.Select(assignment => assignment.LocalId));
 
     private static StaffSaveResult Failure(IdentityResult result) =>
-        result.Errors.Any(error => error.Code is "DuplicateEmail" or "DuplicateUserName")
+        IdentityFailure.IsDuplicateEmail(result)
             ? StaffSaveResult.DuplicateEmail
-            : throw new InvalidOperationException(
-                $"No se pudo guardar la cuenta: {string.Join("; ", result.Errors.Select(error => error.Description))}");
-
-    /// <summary>Solo el correo y el nombre de usuario tienen índices únicos en este modelo.</summary>
-    private static bool IsUniqueViolation(DbUpdateException exception) =>
-        exception.InnerException is SqliteException { SqliteErrorCode: 19 };
-
-    private static string SearchPattern(string term)
-    {
-        var escaped = term
-            .Replace("\\", "\\\\")
-            .Replace("%", "\\%")
-            .Replace("_", "\\_");
-
-        return $"%{escaped}%";
-    }
+            : throw IdentityFailure.Unexpected(result);
 }

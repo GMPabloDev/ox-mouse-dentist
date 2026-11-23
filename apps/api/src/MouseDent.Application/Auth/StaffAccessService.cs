@@ -20,10 +20,29 @@ public sealed class StaffAccessService(
 {
     /// <summary>
     /// Envía una invitación a la cuenta. Devuelve <c>false</c> cuando el correo no
-    /// se pudo entregar; el enlace anterior ya no sirve en ese caso.
+    /// se pudo entregar; el enlace anterior ya no sirve en ese caso. El resultado
+    /// queda guardado en la cuenta como marca del último envío fallido, que dura
+    /// hasta que un envío se entregue, la cuenta establezca su contraseña o cambie
+    /// su correo. Registrar o limpiar la marca no cambia la versión de sesión.
     /// </summary>
-    public Task<bool> SendInvitationAsync(StaffAccount account, CancellationToken cancellationToken) =>
-        IssueAndSendAsync(account, AccessLinkPurpose.Invitation, cancellationToken);
+    public async Task<bool> SendInvitationAsync(StaffAccount account, CancellationToken cancellationToken)
+    {
+        var delivered = await IssueAndSendAsync(account, AccessLinkPurpose.Invitation, cancellationToken);
+
+        if (delivered)
+        {
+            await accounts.ClearInvitationFailureAsync(account.Id, cancellationToken);
+        }
+        else
+        {
+            await accounts.RecordInvitationFailureAsync(
+                account.Id,
+                clock.GetUtcNow().UtcDateTime,
+                cancellationToken);
+        }
+
+        return delivered;
+    }
 
     /// <summary>
     /// Atiende una solicitud pública de recuperación. No revela si la cuenta

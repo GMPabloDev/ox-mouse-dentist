@@ -47,6 +47,17 @@ public sealed class StaffAccount
     public bool IsPending => PasswordEstablishedAt is null;
 
     /// <summary>
+    /// Estado visible de la cuenta. La desactivación prevalece: una cuenta inactiva
+    /// no figura como pendiente aunque no tenga contraseña.
+    /// </summary>
+    public EstadoDeCuenta Estado =>
+        !IsActive
+            ? EstadoDeCuenta.Inactiva
+            : IsPending
+                ? EstadoDeCuenta.Pendiente
+                : EstadoDeCuenta.Activa;
+
+    /// <summary>
     /// Versión de la sesión. Cambia cuando una operación debe invalidar los
     /// tokens ya emitidos: desactivar o reactivar la cuenta, cambiar el correo,
     /// cambiar el perfil o establecer una contraseña nueva. Los cambios de

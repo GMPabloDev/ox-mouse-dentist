@@ -30,5 +30,13 @@ public sealed class StaffUser : IdentityUser<Guid>
     /// </summary>
     public int SessionVersion { get; set; } = 1;
 
+    /// <summary>
+    /// Momento del último envío de invitación que no se entregó. Se limpia cuando un
+    /// envío se entrega, cuando la cuenta establece su contraseña o cuando cambia su
+    /// correo. Solo tiene sentido en una cuenta pendiente y no altera la versión de
+    /// sesión: registrar el fallo de un correo no invalida los tokens emitidos.
+    /// </summary>
+    public DateTime? InvitationFailedAt { get; set; }
+
     public ICollection<StaffLocalAssignment> Assignments { get; set; } = [];
 }

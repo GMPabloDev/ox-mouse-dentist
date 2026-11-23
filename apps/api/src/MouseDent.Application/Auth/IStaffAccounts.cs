@@ -45,6 +45,20 @@ public interface IStaffAccounts
     /// esa misma transacción.
     /// </summary>
     Task<StaffSaveResult> UpdateAsync(StaffAccount account, StaffAccount expected, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Marca el fallo del último envío de invitación de la cuenta, que la lista de
+    /// profesionales muestra mientras la cuenta siga pendiente. Es una actualización
+    /// acotada: no cambia la versión de la sesión y no pasa por la protección del
+    /// último administrador.
+    /// </summary>
+    Task RecordInvitationFailureAsync(
+        Guid accountId,
+        DateTime failedAt,
+        CancellationToken cancellationToken);
+
+    /// <summary>Limpia la marca de fallo porque una invitación se entregó.</summary>
+    Task ClearInvitationFailureAsync(Guid accountId, CancellationToken cancellationToken);
 }
 
 public enum StaffSaveResult

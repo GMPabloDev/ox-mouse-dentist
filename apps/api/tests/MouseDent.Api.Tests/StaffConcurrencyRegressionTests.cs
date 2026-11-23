@@ -318,5 +318,9 @@ public sealed class StaffConcurrencyRegressionTests
             if (BeforeWrite is not null) await BeforeWrite();
             return await inner.UpdateAsync(account, expected, cancellationToken);
         }
+        public Task RecordInvitationFailureAsync(Guid accountId, DateTime failedAt, CancellationToken cancellationToken) =>
+            inner.RecordInvitationFailureAsync(accountId, failedAt, cancellationToken);
+        public Task ClearInvitationFailureAsync(Guid accountId, CancellationToken cancellationToken) =>
+            inner.ClearInvitationFailureAsync(accountId, cancellationToken);
     }
 }

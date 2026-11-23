@@ -85,6 +85,9 @@ public sealed class EfStaffAccessLinks(
         user.PasswordHash = users.PasswordHasher.HashPassword(user, password);
         user.PasswordEstablishedAt = now;
 
+        // La persona atendió la invitación: el fallo del último envío deja de aplicar.
+        user.InvitationFailedAt = null;
+
         // Completar la contraseña invalida las sesiones anteriores en la siguiente solicitud.
         user.SessionVersion++;
 

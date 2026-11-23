@@ -1,7 +1,11 @@
 using MouseDent.Application.Auth;
+using MouseDent.Application.Catalogo;
 using MouseDent.Application.Locales;
+using MouseDent.Application.Profesionales;
 using MouseDent.Domain.Auth;
+using MouseDent.Domain.Catalogo;
 using MouseDent.Domain.Locales;
+using MouseDent.Domain.Profesionales;
 
 namespace MouseDent.Application.Tests;
 
@@ -57,6 +61,29 @@ internal sealed class FakeStaffAccounts(params StaffAccount[] stored) : IStaffAc
         }
 
         return Task.FromResult(UpdateResult);
+    }
+
+    /// <summary>Fallos de invitación registrados, en orden; el último de una cuenta es su marca.</summary>
+    public List<(Guid AccountId, DateTime FailedAt)> InvitationFailures { get; } = [];
+
+    /// <summary>Cuentas cuya marca de fallo se limpió porque un envío se entregó.</summary>
+    public List<Guid> ClearedInvitationFailures { get; } = [];
+
+    public Task RecordInvitationFailureAsync(
+        Guid accountId,
+        DateTime failedAt,
+        CancellationToken cancellationToken)
+    {
+        InvitationFailures.Add((accountId, failedAt));
+
+        return Task.CompletedTask;
+    }
+
+    public Task ClearInvitationFailureAsync(Guid accountId, CancellationToken cancellationToken)
+    {
+        ClearedInvitationFailures.Add(accountId);
+
+        return Task.CompletedTask;
     }
 }
 
