@@ -215,6 +215,22 @@ public sealed class ProfesionalEdicionTests
         contexto.Fichas.Saved.ShouldHaveSingleItem();
     }
 
+    [Fact]
+    public async Task Requesting_the_status_the_ficha_already_has_does_not_revalidate_the_minimum()
+    {
+        var contexto = Contexto.Crear();
+        contexto.Especialidad.Deactivate();
+        contexto.Local.Deactivate();
+
+        // La ficha sigue activa aunque sus asignaciones se desactivaran después: pedir el
+        // estado que ya tiene no es una reactivación y no escribe.
+        var outcome = await contexto.Service.SetStatusAsync(contexto.Ficha.Id, isActive: true, Token);
+
+        outcome.Status.ShouldBe(ProfesionalEstadoStatus.Saved);
+        contexto.Ficha.IsActive.ShouldBeTrue();
+        contexto.Fichas.Saved.ShouldBeEmpty();
+    }
+
     [Theory]
     [InlineData("especialidad")]
     [InlineData("local")]

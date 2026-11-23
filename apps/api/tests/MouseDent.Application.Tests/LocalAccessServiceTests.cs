@@ -37,11 +37,15 @@ public sealed class LocalAccessServiceTests
 
         (await service.CanOperateAsync(contexto.Account.Id, contexto.Local.Id, Token)).ShouldBeTrue();
 
+        // Otro request cambia los locales de atención y guarda la ficha. La instancia que
+        // leyó la primera llamada no cambia, así que un servicio que la cacheara no vería
+        // esta edición y seguiría autorizando el local anterior.
         contexto.Ficha.Editar(
             colegiatura: null,
             [contexto.EspecialidadId],
             [contexto.OtroLocal.Id],
             contexto.Activos());
+        await contexto.Fichas.GuardarAsync(contexto.Ficha, Token);
 
         (await service.CanOperateAsync(contexto.Account.Id, contexto.Local.Id, Token)).ShouldBeFalse();
         (await service.CanOperateAsync(contexto.Account.Id, contexto.OtroLocal.Id, Token)).ShouldBeTrue();
@@ -57,11 +61,13 @@ public sealed class LocalAccessServiceTests
         var service = contexto.Service();
 
         contexto.Ficha.Desactivar();
+        await contexto.Fichas.GuardarAsync(contexto.Ficha, Token);
 
         (await service.CanOperateAsync(contexto.Account.Id, contexto.Local.Id, Token)).ShouldBeFalse();
         (await service.AccessibleLocalsAsync(contexto.Account.Id, Token)).ShouldBeEmpty();
 
         contexto.Ficha.Activar(contexto.Activos());
+        await contexto.Fichas.GuardarAsync(contexto.Ficha, Token);
 
         (await service.CanOperateAsync(contexto.Account.Id, contexto.Local.Id, Token)).ShouldBeTrue();
         (await service.AccessibleLocalsAsync(contexto.Account.Id, Token))
@@ -152,11 +158,16 @@ public sealed class LocalAccessServiceTests
         (await service.AccessibleLocalsAsync(Guid.NewGuid(), Token)).ShouldBeEmpty();
     }
 
-    /// <summary>Cuenta profesional con contraseña establecida, ficha activa y dos locales.</summary>
+    /// <summary>
+    /// Cuenta profesional con contraseña establecida, ficha activa y dos locales. El
+    /// almacén reconstruye la ficha en cada lectura, así que los cambios de estado de la
+    /// prueba se guardan y nadie comparte la instancia con el servicio.
+    /// </summary>
     private sealed record Contexto(
         StaffAccount Account,
         Guid EspecialidadId,
         Profesional Ficha,
+        FakeProfesionales Fichas,
         Local Local,
         Local OtroLocal)
     {
@@ -172,8 +183,9 @@ public sealed class LocalAccessServiceTests
                 [especialidad.Id],
                 [local.Id],
                 new CatalogoActivo([especialidad.Id], [local.Id, otro.Id]));
+            var fichas = new FakeProfesionales(ficha) { ReconstruirAlLeer = true };
 
-            return new Contexto(account, especialidad.Id, ficha, local, otro);
+            return new Contexto(account, especialidad.Id, ficha, fichas, local, otro);
         }
 
         public CatalogoActivo Activos() =>
@@ -182,7 +194,7 @@ public sealed class LocalAccessServiceTests
         public LocalAccessService Service() =>
             new(
                 new FakeStaffAccounts(Account),
-                new FakeProfesionales(Ficha),
+                Fichas,
                 new FakeLocalStore(Local, OtroLocal));
     }
 }

@@ -88,7 +88,9 @@ public sealed class ProfesionalManagementService(
     /// <summary>
     /// Activa o desactiva una ficha. Desactivar conserva las especialidades, los
     /// locales y la cuenta; reactivar exige recuperar al menos una especialidad activa
-    /// y un local activo.
+    /// y un local activo. Pedir el estado que la ficha ya tiene no es una reactivación:
+    /// devuelve la ficha guardada sin revalidar el mínimo, así la operación se puede
+    /// repetir sin un conflicto que no existe.
     /// </summary>
     public async Task<ProfesionalEstadoOutcome> SetStatusAsync(
         Guid id,
@@ -99,6 +101,11 @@ public sealed class ProfesionalManagementService(
         if (ficha is null)
         {
             return ProfesionalEstadoOutcome.Rejected(ProfesionalEstadoStatus.NotFound);
+        }
+
+        if (ficha.IsActive == isActive)
+        {
+            return ProfesionalEstadoOutcome.Saved();
         }
 
         if (isActive)

@@ -35,9 +35,9 @@ public sealed class UpdateProfesionalForm
     [Description("Número de colegiatura opcional, de hasta 30 caracteres tras quitar los espacios de los extremos. Único entre todas las fichas, incluidas las inactivas.")]
     public string? Colegiatura { get; set; }
 
-    [Description("Al menos una especialidad. Solo se pueden añadir activas; las ya asignadas se conservan aunque después se hayan desactivado.")]
+    [Description("Especialidades asignadas. Solo se pueden añadir activas; las ya asignadas se conservan aunque después se hayan desactivado. Una ficha activa necesita al menos una activa y para vaciarlas se desactiva la ficha primero.")]
     public IReadOnlyList<Guid>? EspecialidadIds { get; set; }
 
-    [Description("Al menos un local de atención. Solo se pueden añadir activos; los ya asignados se conservan aunque después se hayan desactivado.")]
+    [Description("Locales de atención asignados. Solo se pueden añadir activos; los ya asignados se conservan aunque después se hayan desactivado. Una ficha activa necesita al menos uno activo y para vaciarlos se desactiva la ficha primero.")]
     public IReadOnlyList<Guid>? LocalIds { get; set; }
 }

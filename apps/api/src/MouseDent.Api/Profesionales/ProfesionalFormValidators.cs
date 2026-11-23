@@ -45,6 +45,9 @@ public sealed class CreateProfesionalFormValidator : AbstractValidator<CreatePro
 /// <summary>
 /// Reglas de forma de la edición de una ficha. Solo cambia la colegiatura y las
 /// asignaciones: el nombre, el correo, el teléfono y el perfil pertenecen a la cuenta.
+/// El mínimo de una ficha activa depende de su estado persistido y de la actividad del
+/// catálogo y del local, así que lo aplica el caso de uso: una ficha inactiva se edita
+/// sin asignaciones y se reactiva cuando recupere una especialidad y un local activos.
 /// </summary>
 public sealed class UpdateProfesionalFormValidator : AbstractValidator<UpdateProfesionalForm>
 {
@@ -55,17 +58,11 @@ public sealed class UpdateProfesionalFormValidator : AbstractValidator<UpdatePro
             .WithMessage($"El número de colegiatura no puede superar los {DatosDeColegiatura.LongitudMaxima} caracteres.");
 
         RuleFor(form => form.EspecialidadIds)
-            .Cascade(CascadeMode.Stop)
-            .Must(ids => ids is { Count: > 0 })
-            .WithMessage("Asigna al menos una especialidad.")
-            .Must(ids => ids!.All(id => id != Guid.Empty))
+            .Must(ids => ids is null || ids.All(id => id != Guid.Empty))
             .WithMessage("La especialidad asignada no es válida.");
 
         RuleFor(form => form.LocalIds)
-            .Cascade(CascadeMode.Stop)
-            .Must(ids => ids is { Count: > 0 })
-            .WithMessage("Asigna al menos un local de atención.")
-            .Must(ids => ids!.All(id => id != Guid.Empty))
+            .Must(ids => ids is null || ids.All(id => id != Guid.Empty))
             .WithMessage("El local asignado no es válido.");
     }
 }

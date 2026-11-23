@@ -349,11 +349,11 @@ export type UpdateProfesionalForm = {
    */
   colegiatura?: null | string;
   /**
-   * Al menos una especialidad. Solo se pueden añadir activas; las ya asignadas se conservan aunque después se hayan desactivado.
+   * Especialidades asignadas. Solo se pueden añadir activas; las ya asignadas se conservan aunque después se hayan desactivado. Una ficha activa necesita al menos una activa y para vaciarlas se desactiva la ficha primero.
    */
   especialidadIds?: null | Array<string>;
   /**
-   * Al menos un local de atención. Solo se pueden añadir activos; los ya asignados se conservan aunque después se hayan desactivado.
+   * Locales de atención asignados. Solo se pueden añadir activos; los ya asignados se conservan aunque después se hayan desactivado. Una ficha activa necesita al menos uno activo y para vaciarlos se desactiva la ficha primero.
    */
   localIds?: null | Array<string>;
 };

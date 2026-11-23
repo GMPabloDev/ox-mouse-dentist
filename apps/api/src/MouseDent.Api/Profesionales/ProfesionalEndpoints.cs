@@ -140,7 +140,7 @@ public static class ProfesionalEndpoints
             ProfesionalAltaStatus.WrongProfile => WrongProfileProblem(),
             ProfesionalAltaStatus.AccountAlreadyLinked => AccountAlreadyLinkedProblem(),
             ProfesionalAltaStatus.DuplicateEmail => ConcurrentAltaProblem(),
-            ProfesionalAltaStatus.AccountNotFound => ConcurrentAltaProblem(),
+            ProfesionalAltaStatus.AccountNotFound => AccountNotFoundProblem(),
             ProfesionalAltaStatus.InvalidColegiatura => InvalidColegiaturaProblem(),
             ProfesionalAltaStatus.DuplicateColegiatura => DuplicateColegiaturaProblem(),
             _ => AssignmentsProblem(outcome.Status),
@@ -310,6 +310,16 @@ public static class ProfesionalEndpoints
         statusCode: StatusCodes.Status409Conflict);
 
     /// <summary>
+    /// La cuenta a vincular desapareció entre la lectura y la escritura, así que el
+    /// vínculo no encontró a quién vincular. No es un correo repetido: la solicitud sí
+    /// leyó la cuenta y el alta no compitió con otra.
+    /// </summary>
+    private static ProblemHttpResult AccountNotFoundProblem() => TypedResults.Problem(
+        title: "Cuenta no encontrada",
+        detail: "La cuenta de ese correo dejó de existir entre la lectura y el guardado de la ficha. Revisa la lista de personal y vuelve a intentarlo.",
+        statusCode: StatusCodes.Status409Conflict);
+
+    /// <summary>
     /// La ficha y la cuenta quedaron guardadas, pero el correo no salió. Se informa el
     /// fallo con el identificador para que administración pueda reenviar la invitación
     /// desde la ficha, sin volver a darla de alta.
@@ -338,40 +348,58 @@ public static class ProfesionalEndpoints
 
     /// <summary>
     /// Traduce una asignación rechazada al campo que administración debe corregir. El
-    /// motivo depende del estado persistido del catálogo y del local, por eso se
-    /// resuelve en el caso de uso y aquí solo se publica.
+    /// motivo depende del estado persistido del catálogo y del local, por eso se resuelve
+    /// en el caso de uso y aquí solo se publica. Solo se marca el campo afectado: el que
+    /// llegó activo y existente no tiene nada que corregir.
     /// </summary>
-    private static ValidationProblem AssignmentsProblem(ProfesionalAltaStatus status) =>
-        TypedResults.ValidationProblem(new Dictionary<string, string[]>
-        {
-            [nameof(CreateProfesionalForm.EspecialidadIds)] =
-            [
-                status is ProfesionalAltaStatus.ActivacionIncompleta
-                    ? "La ficha activa necesita al menos una especialidad activa."
-                    : "Solo puedes asignar especialidades activas existentes.",
-            ],
-            [nameof(CreateProfesionalForm.LocalIds)] =
-            [
-                status is ProfesionalAltaStatus.ActivacionIncompleta
-                    ? "La ficha activa necesita al menos un local de atención activo."
-                    : "Solo puedes añadir locales de atención activos existentes.",
-            ],
-        });
+    private static ValidationProblem AssignmentsProblem(ProfesionalAltaStatus status) => status switch
+    {
+        ProfesionalAltaStatus.EspecialidadInactiva => SingleFieldProblem(
+            nameof(CreateProfesionalForm.EspecialidadIds),
+            "Solo puedes asignar especialidades activas existentes."),
+        ProfesionalAltaStatus.LocalInactivo => SingleFieldProblem(
+            nameof(CreateProfesionalForm.LocalIds),
+            "Solo puedes añadir locales de atención activos existentes."),
+        ProfesionalAltaStatus.ActivacionIncompleta => TypedResults.ValidationProblem(
+            new Dictionary<string, string[]>
+            {
+                [nameof(CreateProfesionalForm.EspecialidadIds)] =
+                [
+                    "La ficha activa necesita al menos una especialidad activa.",
+                ],
+                [nameof(CreateProfesionalForm.LocalIds)] =
+                [
+                    "La ficha activa necesita al menos un local de atención activo.",
+                ],
+            }),
+        _ => throw new InvalidOperationException(
+            "Solo los motivos de asignación tienen un campo que corregir."),
+    };
 
-    private static ValidationProblem AssignmentsProblem(ProfesionalEdicionStatus status) =>
-        TypedResults.ValidationProblem(new Dictionary<string, string[]>
-        {
-            [nameof(UpdateProfesionalForm.EspecialidadIds)] =
-            [
-                status is ProfesionalEdicionStatus.ActivacionIncompleta
-                    ? "La ficha activa necesita al menos una especialidad activa. Desactívala antes de retirarlas todas o asigna una activa."
-                    : "Solo puedes asignar especialidades activas existentes; las ya asignadas se conservan.",
-            ],
-            [nameof(UpdateProfesionalForm.LocalIds)] =
-            [
-                status is ProfesionalEdicionStatus.ActivacionIncompleta
-                    ? "La ficha activa necesita al menos un local de atención activo. Desactívala antes de retirarlos todos o asigna uno activo."
-                    : "Solo puedes añadir locales de atención activos existentes; los ya asignados se conservan.",
-            ],
-        });
+    private static ValidationProblem AssignmentsProblem(ProfesionalEdicionStatus status) => status switch
+    {
+        ProfesionalEdicionStatus.EspecialidadInactiva => SingleFieldProblem(
+            nameof(UpdateProfesionalForm.EspecialidadIds),
+            "Solo puedes asignar especialidades activas existentes; las ya asignadas se conservan."),
+        ProfesionalEdicionStatus.LocalInactivo => SingleFieldProblem(
+            nameof(UpdateProfesionalForm.LocalIds),
+            "Solo puedes añadir locales de atención activos existentes; los ya asignados se conservan."),
+        ProfesionalEdicionStatus.ActivacionIncompleta => TypedResults.ValidationProblem(
+            new Dictionary<string, string[]>
+            {
+                [nameof(UpdateProfesionalForm.EspecialidadIds)] =
+                [
+                    "La ficha activa necesita al menos una especialidad activa. Desactívala antes de retirarlas todas o asigna una activa.",
+                ],
+                [nameof(UpdateProfesionalForm.LocalIds)] =
+                [
+                    "La ficha activa necesita al menos un local de atención activo. Desactívala antes de retirarlos todos o asigna uno activo.",
+                ],
+            }),
+        _ => throw new InvalidOperationException(
+            "Solo los motivos de asignación tienen un campo que corregir."),
+    };
+
+    private static ValidationProblem SingleFieldProblem(string campo, string mensaje) =>
+        TypedResults.ValidationProblem(new Dictionary<string, string[]> { [campo] = [mensaje] });
 }

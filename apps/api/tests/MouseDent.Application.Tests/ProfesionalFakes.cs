@@ -53,14 +53,24 @@ internal sealed class FakeProfesionales(params Profesional[] stored) : IProfesio
     /// <summary>Resultado que devuelve la escritura; solo <c>Guardado</c> conserva la ficha.</summary>
     public ResultadoGuardadoProfesional SaveResult { get; init; } = ResultadoGuardadoProfesional.Guardado;
 
+    /// <summary>
+    /// Cuando es verdadero, el almacén guarda copias y reconstruye la ficha con
+    /// <see cref="Profesional.Restaurar"/> en cada lectura, como la persistencia real.
+    /// Así la prueba detecta a un consumidor que cachea la ficha: una copia guardada por
+    /// él no ve los cambios posteriores del almacén.
+    /// </summary>
+    public bool ReconstruirAlLeer { get; init; }
+
     /// <summary>Fichas que la escritura aceptó, en orden.</summary>
     public List<Profesional> Saved { get; } = [];
 
     public Task<Profesional?> BuscarAsync(Guid id, CancellationToken cancellationToken) =>
-        Task.FromResult(_fichas.FirstOrDefault(ficha => ficha.Id == id));
+        Task.FromResult(_fichas.Where(ficha => ficha.Id == id).Select(Leer).FirstOrDefault());
 
     public Task<Profesional?> BuscarPorCuentaAsync(Guid staffAccountId, CancellationToken cancellationToken) =>
-        Task.FromResult(_fichas.FirstOrDefault(ficha => ficha.StaffAccountId == staffAccountId));
+        Task.FromResult(_fichas.FirstOrDefault(ficha => ficha.StaffAccountId == staffAccountId) is { } ficha
+            ? Leer(ficha)
+            : null);
 
     public Task<bool> ColegiaturaEstaTomadaAsync(
         string colegiaturaNormalizada,
@@ -78,20 +88,36 @@ internal sealed class FakeProfesionales(params Profesional[] stored) : IProfesio
             return Task.FromResult(SaveResult);
         }
 
+        var guardada = Leer(profesional);
         var index = _fichas.FindIndex(ficha => ficha.Id == profesional.Id);
         if (index < 0)
         {
-            _fichas.Add(profesional);
+            _fichas.Add(guardada);
         }
         else
         {
-            _fichas[index] = profesional;
+            _fichas[index] = guardada;
         }
 
         Saved.Add(profesional);
 
         return Task.FromResult(SaveResult);
     }
+
+    /// <summary>
+    /// Ficha que entrega una lectura. Con <see cref="ReconstruirAlLeer"/> es una copia
+    /// nueva, de modo que nadie comparte la instancia con el almacén.
+    /// </summary>
+    private Profesional Leer(Profesional ficha) =>
+        ReconstruirAlLeer
+            ? Profesional.Restaurar(
+                ficha.Id,
+                ficha.StaffAccountId,
+                ficha.Colegiatura,
+                ficha.IsActive,
+                ficha.EspecialidadIds,
+                ficha.LocalIds)
+            : ficha;
 }
 
 /// <summary>Catálogo en memoria. Las pruebas del alta solo leen las especialidades.</summary>

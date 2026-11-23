@@ -3,9 +3,14 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using MouseDent.Api.Auth;
 using MouseDent.Api.Profesionales;
+using MouseDent.Application.Auth;
+using MouseDent.Application.Profesionales;
 using MouseDent.Domain.Auth;
+using MouseDent.Domain.Profesionales;
 using Shouldly;
 
 namespace MouseDent.Api.Tests;
@@ -382,7 +387,9 @@ public sealed class ProfesionalEndpointsTests(MouseDentApiFactory factory) : ICl
         using var response = await ProfesionalTestHelpers.CreateAsync(admin, email, especialidadIds, localIds);
 
         response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
-        (await ReadValidationAsync(response)).Keys.ShouldContain(campo);
+
+        // Solo el campo afectado: el otro llegó activo y no debe marcarse.
+        (await ReadValidationAsync(response)).Keys.ShouldBe([campo]);
         (await ProfesionalTestHelpers.ListAsync(admin, Query("search", email))).ShouldBeEmpty();
         factory.Emails.SentTo(email).ShouldBeEmpty();
     }
@@ -625,8 +632,9 @@ public sealed class ProfesionalEndpointsTests(MouseDentApiFactory factory) : ICl
         {
             rechazada.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
             var errors = await ReadValidationAsync(rechazada);
-            errors.Keys.ShouldContain("EspecialidadIds");
-            errors.Keys.ShouldContain("LocalIds");
+
+            // Falta el mínimo de los dos campos, así que se marcan los dos.
+            errors.Keys.ShouldBe(["EspecialidadIds", "LocalIds"], ignoreOrder: true);
         }
 
         var sinCambios = await ProfesionalTestHelpers.GetAsync(admin, ficha.Id);
@@ -658,6 +666,133 @@ public sealed class ProfesionalEndpointsTests(MouseDentApiFactory factory) : ICl
         reactivada.StatusCode.ShouldBe(HttpStatusCode.Conflict);
         (await ReadProblemAsync(reactivada)).Title.ShouldBe("Activación incompleta");
         (await ProfesionalTestHelpers.GetAsync(admin, ficha.Id)).IsActive.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task The_edit_of_an_inactive_ficha_can_empty_its_assignments_and_its_colegiatura()
+    {
+        using var admin = await AdminAsync();
+        var especialidad = await ProfesionalTestHelpers.CreateEspecialidadAsync(admin);
+        var local = await ProfesionalTestHelpers.CreateLocalAsync(admin);
+        var ficha = await ProfesionalTestHelpers.CreateProfesionalAsync(
+            admin,
+            StaffTestHelpers.UniqueEmail("edicion.vacia"),
+            [especialidad.Id],
+            [local.Id],
+            "COP VACIA");
+
+        using (var desactivada = await ProfesionalTestHelpers.SetFichaStatusAsync(admin, ficha.Id, isActive: false))
+        {
+            desactivada.StatusCode.ShouldBe(HttpStatusCode.OK);
+        }
+
+        // Para vaciar una ficha se desactiva primero: la inactiva acepta quedarse sin
+        // especialidades, sin locales y sin colegiatura.
+        using var response = await ProfesionalTestHelpers.UpdateAsync(admin, ficha.Id, [], []);
+
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        var vacia = await ProfesionalTestHelpers.ReadAsync(response);
+        vacia.ShouldSatisfyAllConditions(
+            guardada => guardada.IsActive.ShouldBeFalse(),
+            guardada => guardada.Colegiatura.ShouldBeNull(),
+            guardada => guardada.Especialidades.ShouldBeEmpty(),
+            guardada => guardada.Locales.ShouldBeEmpty());
+
+        var stored = await ProfesionalTestHelpers.GetAsync(admin, ficha.Id);
+        stored.Colegiatura.ShouldBeNull();
+        stored.Especialidades.ShouldBeEmpty();
+        stored.Locales.ShouldBeEmpty();
+    }
+
+    [Theory]
+    [InlineData("especialidad-vacia", "EspecialidadIds")]
+    [InlineData("local-vacio", "LocalIds")]
+    public async Task The_edit_rejects_an_empty_assignment_identifier(string caso, string campo)
+    {
+        using var admin = await AdminAsync();
+        var especialidad = await ProfesionalTestHelpers.CreateEspecialidadAsync(admin);
+        var local = await ProfesionalTestHelpers.CreateLocalAsync(admin);
+        var ficha = await ProfesionalTestHelpers.CreateProfesionalAsync(
+            admin,
+            StaffTestHelpers.UniqueEmail($"edicion.{caso}"),
+            [especialidad.Id],
+            [local.Id]);
+
+        var especialidadIds = caso == "especialidad-vacia"
+            ? new[] { especialidad.Id, Guid.Empty }
+            : new[] { especialidad.Id };
+        var localIds = caso == "local-vacio"
+            ? new[] { local.Id, Guid.Empty }
+            : new[] { local.Id };
+
+        using var response = await ProfesionalTestHelpers.UpdateAsync(admin, ficha.Id, especialidadIds, localIds);
+
+        response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        (await ReadValidationAsync(response)).Keys.ShouldBe([campo]);
+    }
+
+    [Fact]
+    public async Task The_edit_of_an_active_ficha_rejects_empty_assignments_as_an_incomplete_activation()
+    {
+        using var admin = await AdminAsync();
+        var especialidad = await ProfesionalTestHelpers.CreateEspecialidadAsync(admin);
+        var local = await ProfesionalTestHelpers.CreateLocalAsync(admin);
+        var ficha = await ProfesionalTestHelpers.CreateProfesionalAsync(
+            admin,
+            StaffTestHelpers.UniqueEmail("edicion.activa.vacia"),
+            [especialidad.Id],
+            [local.Id]);
+        var antes = await ProfesionalTestHelpers.GetAsync(admin, ficha.Id);
+
+        using var response = await ProfesionalTestHelpers.UpdateAsync(admin, ficha.Id, [], []);
+
+        response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        var errors = await ReadValidationAsync(response);
+        errors.Keys.ShouldBe(["EspecialidadIds", "LocalIds"], ignoreOrder: true);
+        errors.Values.SelectMany(mensajes => mensajes)
+            .ShouldAllBe(mensaje => mensaje.Contains("Desactívala antes", StringComparison.Ordinal));
+        ShouldBeSameFicha(antes, await ProfesionalTestHelpers.GetAsync(admin, ficha.Id));
+    }
+
+    [Theory]
+    [InlineData("especialidad-inactiva", "EspecialidadIds")]
+    [InlineData("especialidad-inexistente", "EspecialidadIds")]
+    [InlineData("local-inactivo", "LocalIds")]
+    [InlineData("local-inexistente", "LocalIds")]
+    public async Task The_edit_rejects_inactive_or_unknown_assignments_without_changing_the_ficha(
+        string caso,
+        string campo)
+    {
+        using var admin = await AdminAsync();
+        var especialidad = await ProfesionalTestHelpers.CreateEspecialidadAsync(admin);
+        var local = await ProfesionalTestHelpers.CreateLocalAsync(admin);
+        var inactiva = await ProfesionalTestHelpers.CreateEspecialidadAsync(admin, isActive: false);
+        var inactivo = await ProfesionalTestHelpers.CreateLocalAsync(admin, isActive: false);
+        var ficha = await ProfesionalTestHelpers.CreateProfesionalAsync(
+            admin,
+            StaffTestHelpers.UniqueEmail($"edicion.{caso}"),
+            [especialidad.Id],
+            [local.Id]);
+        var antes = await ProfesionalTestHelpers.GetAsync(admin, ficha.Id);
+
+        var especialidadIds = caso switch
+        {
+            "especialidad-inactiva" => new[] { especialidad.Id, inactiva.Id },
+            "especialidad-inexistente" => new[] { especialidad.Id, Guid.NewGuid() },
+            _ => new[] { especialidad.Id },
+        };
+        var localIds = caso switch
+        {
+            "local-inactivo" => new[] { local.Id, inactivo.Id },
+            "local-inexistente" => new[] { local.Id, Guid.NewGuid() },
+            _ => new[] { local.Id },
+        };
+
+        using var response = await ProfesionalTestHelpers.UpdateAsync(admin, ficha.Id, especialidadIds, localIds);
+
+        response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        (await ReadValidationAsync(response)).Keys.ShouldBe([campo]);
+        ShouldBeSameFicha(antes, await ProfesionalTestHelpers.GetAsync(admin, ficha.Id));
     }
 
     [Fact]
@@ -700,6 +835,45 @@ public sealed class ProfesionalEndpointsTests(MouseDentApiFactory factory) : ICl
         sinEstado.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
         (await ReadProblemAsync(sinEstado)).Title.ShouldNotBeNullOrWhiteSpace();
         (await ProfesionalTestHelpers.GetAsync(admin, ficha.Id)).IsActive.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task Repeating_the_current_status_is_idempotent_and_a_real_reactivation_still_requires_the_minimum()
+    {
+        using var admin = await AdminAsync();
+        var especialidad = await ProfesionalTestHelpers.CreateEspecialidadAsync(admin);
+        var local = await ProfesionalTestHelpers.CreateLocalAsync(admin);
+        var ficha = await ProfesionalTestHelpers.CreateProfesionalAsync(
+            admin,
+            StaffTestHelpers.UniqueEmail("estado.repetido"),
+            [especialidad.Id],
+            [local.Id]);
+
+        // Las asignaciones se desactivan después en el catálogo y en el local.
+        await ProfesionalTestHelpers.SetEspecialidadStatusAsync(admin, especialidad.Id, isActive: false);
+        await ProfesionalTestHelpers.SetLocalStatusAsync(admin, local.Id, isActive: false);
+
+        // Pedir el estado que la ficha ya tiene no es una reactivación: no revalida el mínimo.
+        using (var repetido = await ProfesionalTestHelpers.SetFichaStatusAsync(admin, ficha.Id, isActive: true))
+        {
+            repetido.StatusCode.ShouldBe(HttpStatusCode.OK);
+            var estado = await ProfesionalTestHelpers.ReadAsync(repetido);
+            estado.IsActive.ShouldBeTrue();
+            estado.Especialidades.ShouldHaveSingleItem().IsActive.ShouldBeFalse();
+            estado.Locales.ShouldHaveSingleItem().IsActive.ShouldBeFalse();
+        }
+
+        using (var desactivada = await ProfesionalTestHelpers.SetFichaStatusAsync(admin, ficha.Id, isActive: false))
+        {
+            desactivada.StatusCode.ShouldBe(HttpStatusCode.OK);
+        }
+
+        // La reactivación real sigue exigiendo una especialidad activa y un local activo.
+        using var reactivada = await ProfesionalTestHelpers.SetFichaStatusAsync(admin, ficha.Id, isActive: true);
+
+        reactivada.StatusCode.ShouldBe(HttpStatusCode.Conflict);
+        (await ReadProblemAsync(reactivada)).Title.ShouldBe("Activación incompleta");
+        (await ProfesionalTestHelpers.GetAsync(admin, ficha.Id)).IsActive.ShouldBeFalse();
     }
 
     [Fact]
@@ -799,4 +973,66 @@ public sealed class ProfesionalEndpointsTests(MouseDentApiFactory factory) : ICl
     }
 
     private sealed record ValidationProblemPayload(Dictionary<string, string[]>? Errors);
+}
+
+/// <summary>
+/// La cuenta que el alta leyó desaparece antes de la escritura. El producto no borra
+/// cuentas y la ventana entre la lectura y la escritura no se puede provocar por HTTP,
+/// así que el rechazo se fabrica en el almacén de altas. Comprueba el
+/// <c>ProblemDetails</c> propio de esa causa, distinto del de un correo repetido.
+/// </summary>
+public sealed class ProfesionalAltaCuentaPerdidaTests
+{
+    private static CancellationToken Token => TestContext.Current.CancellationToken;
+
+    [Fact]
+    public async Task An_account_that_disappears_before_the_write_reports_its_own_problem()
+    {
+        using var factory = new MissingAccountAltaFactory();
+        using var admin = await StaffTestHelpers.SignInAsync(
+            factory,
+            MouseDentApiFactory.AdminEmail,
+            MouseDentApiFactory.AdminPassword);
+        var especialidad = await ProfesionalTestHelpers.CreateEspecialidadAsync(admin);
+        var local = await ProfesionalTestHelpers.CreateLocalAsync(admin);
+        var email = StaffTestHelpers.UniqueEmail("alta.cuenta.perdida");
+        await factory.SeedAccountAsync(email, ProfesionalTestHelpers.NewPassword, StaffRole.Professional);
+
+        using var response = await ProfesionalTestHelpers.CreateAsync(admin, email, [especialidad.Id], [local.Id]);
+
+        response.StatusCode.ShouldBe(HttpStatusCode.Conflict);
+        response.Content.Headers.ContentType?.MediaType.ShouldBe("application/problem+json");
+        var problem = await response.Content.ReadFromJsonAsync<ProblemPayload>(Token);
+        problem.ShouldNotBeNull();
+        problem.Title.ShouldBe("Cuenta no encontrada");
+        problem.Detail.ShouldNotBeNullOrWhiteSpace();
+        (await ProfesionalTestHelpers.ListAsync(admin, $"search={Uri.EscapeDataString(email)}")).ShouldBeEmpty();
+        factory.Emails.SentTo(email).ShouldBeEmpty();
+    }
+
+    /// <summary>Reemplaza la escritura compuesta por el rechazo de la cuenta desaparecida.</summary>
+    private sealed class MissingAccountAltaFactory() : MouseDentApiFactoryBase(useFileDatabase: false)
+    {
+        protected override void ConfigureTestServices(IServiceCollection services)
+        {
+            services.RemoveAll<IAltasDeProfesionales>();
+            services.AddScoped<IAltasDeProfesionales, MissingAccountAltaStore>();
+        }
+    }
+
+    private sealed class MissingAccountAltaStore : IAltasDeProfesionales
+    {
+        public Task<ResultadoEscrituraAlta> CrearConCuentaAsync(
+            StaffAccount cuenta,
+            Profesional ficha,
+            CancellationToken cancellationToken) =>
+            throw new InvalidOperationException("La prueba vincula una cuenta existente.");
+
+        public Task<ResultadoEscrituraAlta> VincularCuentaAsync(
+            Profesional ficha,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(ResultadoEscrituraAlta.CuentaNoEncontrada);
+    }
+
+    private sealed record ProblemPayload(string? Title, string? Detail);
 }
