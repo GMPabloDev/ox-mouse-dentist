@@ -88,7 +88,9 @@ cambian.
 - Dos profesionales pueden compartir nombre. La interfaz advierte posibles homónimos al crear una
   ficha y permite continuar.
 - Cada profesional activo tiene al menos una especialidad activa y al menos un local activo. La
-  regla se comprueba al crear y al reactivar, también frente a solicitudes simultáneas.
+  regla se comprueba al crear, al editar una ficha activa y al reactivar, también frente a
+  solicitudes simultáneas. Una edición que deje una ficha activa sin una especialidad activa o sin
+  un local activo se rechaza y la ficha queda como estaba.
 - No se puede asignar una especialidad inactiva ni añadir un local inactivo nuevo. Las asignaciones
   existentes a una especialidad que después se desactive, o a un local que después se inactive, se
   conservan y la ficha las muestra marcadas como inactivas.
@@ -257,8 +259,9 @@ regla `/prototypes/`, así que esta referencia es local y no se recupera desde e
       único entre todas las fichas, incluso inactivas y con diferencias de mayúsculas o espacios.
 - [ ] Se pueden registrar dos profesionales con el mismo nombre y la interfaz advierte posibles
       homónimos sin bloquear.
-- [ ] Crear o reactivar exige al menos una especialidad activa y al menos un local activo.
-      Especialidades y locales inactivos solo pueden conservarse, no añadirse.
+- [ ] Crear, editar una ficha activa o reactivar exige al menos una especialidad activa y al
+      menos un local activo. Especialidades y locales inactivos solo pueden conservarse, no
+      añadirse.
 - [ ] Una especialidad desactivada en el catálogo permanece asignada y visible como inactiva. Un
       profesional que se queda sin especialidad activa no se puede reactivar.
 - [ ] Un profesional inactivo opera en ningún local; al reactivarlo recupera sus especialidades y
@@ -300,6 +303,11 @@ regla `/prototypes/`, así que esta referencia es local y no se recupera desde e
   cuenta. Son decisiones distintas: disponibilidad para agenda frente a permiso de acceso.
 - **Especialidad inactiva conservada, activación condicionada.** Se descarta bloquear la
   desactivación en el catálogo: H-04 no gana reglas y la ficha se corrige donde se ve el problema.
+- **La edición de una ficha activa mantiene el mínimo.** Se descarta permitir que una ficha activa
+  quede sin especialidad activa ni local activo: ese estado contradice la regla de activación y
+  obligaría a inventar un comportamiento para la agenda. Para vaciarla se desactiva primero. Una
+  especialidad o un local que se desactive después en el catálogo o en el local se sigue
+  conservando como inactivo.
 - **Sin foto.** Se descarta por ahora: ninguna vista del v1 la muestra y la reserva del v2 todavía
   no está especificada.
 - **Solo administración consulta profesionales.** Se descarta adelantar la consulta de H-01. Sus
