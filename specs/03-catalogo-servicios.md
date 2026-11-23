@@ -1,6 +1,6 @@
 # SPEC 03 — Catálogo de especialidades y servicios
 
-> **Status:** Aprobada **Depends on:** SPEC 01, SPEC 02 **Date:** 2026-11-19 **Objective:** Permitir
+> **Status:** Implementada **Depends on:** SPEC 01, SPEC 02 **Date:** 2026-11-19 **Objective:** Permitir
 > que administración gestione un catálogo global de especialidades y servicios, y que el personal
 > consulte la oferta activa. **Historia de origen:** H-04 en
 > backlogs/backlog-v1-operacion-interna.md
@@ -126,34 +126,34 @@
 
 ## Criterios de aceptación
 
-- [ ] Administración autenticada puede crear, consultar, editar, desactivar y reactivar
+- [x] Administración autenticada puede crear, consultar, editar, desactivar y reactivar
       especialidades y servicios. Los datos persisten tras recargar.
-- [ ] Especialidades y servicios aceptan nombres de 1 a 100 caracteres y descripciones opcionales de
+- [x] Especialidades y servicios aceptan nombres de 1 a 100 caracteres y descripciones opcionales de
       hasta 500, tras quitar espacios exteriores. Se rechazan nombres vacíos y datos fuera de esos
       límites.
-- [ ] No se pueden guardar especialidades con nombres duplicados ni servicios con nombres duplicados
+- [x] No se pueden guardar especialidades con nombres duplicados ni servicios con nombres duplicados
       dentro de la misma especialidad, incluidos los registros inactivos y las diferencias de
       mayúsculas o espacios exteriores. El mismo nombre de servicio puede existir en especialidades
       distintas.
-- [ ] Administración puede cambiar un servicio a una especialidad activa si no hay un nombre
+- [x] Administración puede cambiar un servicio a una especialidad activa si no hay un nombre
       duplicado en el destino. Un rechazo no modifica el servicio.
-- [ ] No se puede desactivar una especialidad con servicios activos. La interfaz explica la
+- [x] No se puede desactivar una especialidad con servicios activos. La interfaz explica la
       condición y permite corregirla.
-- [ ] No se puede crear ni activar un servicio en una especialidad inactiva, ni mover un servicio a
+- [x] No se puede crear ni activar un servicio en una especialidad inactiva, ni mover un servicio a
       ella. Reactivar una especialidad no reactiva sus servicios.
-- [ ] Las operaciones simultáneas no producen nombres duplicados ni servicios activos bajo
+- [x] Las operaciones simultáneas no producen nombres duplicados ni servicios activos bajo
       especialidades inactivas.
-- [ ] Administración puede buscar por nombre, filtrar por estado y filtrar servicios por
+- [x] Administración puede buscar por nombre, filtrar por estado y filtrar servicios por
       especialidad. Los listados distinguen activos e inactivos.
-- [ ] Recepción y profesionales pueden consultar únicamente especialidades y servicios activos,
+- [x] Recepción y profesionales pueden consultar únicamente especialidades y servicios activos,
       buscar por nombre y filtrar por especialidad. No ven controles de modificación.
-- [ ] La API rechaza las solicitudes anónimas y los intentos de modificación de recepción o
+- [x] La API rechaza las solicitudes anónimas y los intentos de modificación de recepción o
       profesionales. Tampoco devuelve registros inactivos a esos perfiles.
-- [ ] Las vistas muestran carga, catálogo vacío, ausencia de resultados y errores. Un error de
+- [x] Las vistas muestran carga, catálogo vacío, ausencia de resultados y errores. Un error de
       consulta permite reintentar y un fallo de guardado no se presenta como éxito.
-- [ ] La variante de prototipo se elige y se incorpora a esta spec antes de implementar la interfaz.
+- [x] La variante de prototipo se elige y se incorpora a esta spec antes de implementar la interfaz.
       Las pantallas implementadas siguen esa referencia.
-- [ ] El OpenAPI y el cliente generado están actualizados. `npm test` y `npm run build` terminan
+- [x] El OpenAPI y el cliente generado están actualizados. `npm test` y `npm run build` terminan
       correctamente.
 
 ## Decisiones
@@ -174,3 +174,11 @@
   personal. Solo administración puede modificarlo.
 - **Vista agrupada.** Se elige el prototipo de catálogo agrupado por especialidad como referencia
   para la interfaz. El código del prototipo no se incorpora a producción.
+- **Entrada al catálogo.** Recepción y profesionales comienzan en el catálogo al iniciar sesión,
+  porque es el primer módulo disponible para ellos. Se descarta llevarles a la bienvenida, que
+  anunciaba la falta de módulos. Una ruta compartida del panel sustituirá este destino en una
+  historia posterior; hasta entonces la bienvenida deja de ser su pantalla inicial.
+- **Panel según el perfil.** Recepción y profesionales ven en el panel solo el catálogo: se omiten
+  la etiqueta de administración y los enlaces a locales y personal, que exigen permisos de
+  administración y terminaban en la pantalla de acceso restringido. Se descarta mantener la
+  navegación completa para esos perfiles con los destinos deshabilitados.
