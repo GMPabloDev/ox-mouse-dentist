@@ -186,3 +186,32 @@
     line-height: 1.5;
   }
 }
+
+/* Aviso de sonner: esquinas contenidas y cierre dentro de la tarjeta. */
+.mousedent-toaster [data-sonner-toast][data-styled='true'] {
+  border-radius: 10px;
+  padding-inline-end: 44px;
+}
+
+.mousedent-toaster [data-sonner-toast] [data-close-button] {
+  inset-inline-start: auto;
+  inset-inline-end: 12px;
+  top: 50%;
+  width: 20px;
+  height: 20px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  transform: translateY(-50%);
+}
+
+.mousedent-toaster [data-sonner-toast] [data-close-button] svg {
+  width: 14px;
+  height: 14px;
+}
+
+.mousedent-toaster [data-sonner-toast] [data-close-button]:hover {
+  background: color-mix(in oklab, currentColor 12%, transparent);
+  color: inherit;
+  border-color: transparent;
+}

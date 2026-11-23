@@ -2,17 +2,27 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { HlmAvatar, HlmAvatarFallback } from '@mousedent/ui/avatar';
+import { HlmToaster } from '@mousedent/ui/sonner';
 import { filter, map } from 'rxjs';
 import { profileLabel, type SessionUser, SessionService } from '../../core/auth/session';
 import { BrandMark } from '../../core/brand/brand-mark';
 
 /**
- * Contenedor del panel de administración. El sidebar solo anuncia los destinos
- * que ya tienen pantalla: locales y personal.
+ * Contenedor del panel. Administración ve los destinos que ya tienen pantalla:
+ * locales, personal y catálogo. Recepción y profesionales solo ven el catálogo,
+ * el módulo al que pueden acceder.
  */
 @Component({
   selector: 'app-panel-layout',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, BrandMark, HlmAvatar, HlmAvatarFallback],
+  imports: [
+    RouterOutlet,
+    RouterLink,
+    RouterLinkActive,
+    BrandMark,
+    HlmAvatar,
+    HlmAvatarFallback,
+    HlmToaster,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './panel-layout.html',
   host: { '(document:keydown.escape)': 'closeSidebar()' },
@@ -22,6 +32,7 @@ export class PanelLayout {
   private readonly router = inject(Router);
 
   protected readonly account = this.session.user;
+  protected readonly admin = this.session.isAdministrator;
   protected readonly mobileOpen = signal(false);
   protected readonly initials = computed(() => initialsOf(this.account()));
   protected readonly roleLabel = computed(() => {
@@ -55,7 +66,11 @@ export class PanelLayout {
 }
 
 function currentSection(url: string): string {
-  return url.startsWith('/personal') ? 'Personal' : 'Locales';
+  return url.startsWith('/catalogo')
+    ? 'Catálogo'
+    : url.startsWith('/personal')
+      ? 'Personal'
+      : 'Locales';
 }
 
 function initialsOf(user: SessionUser | null): string {

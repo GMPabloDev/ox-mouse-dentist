@@ -1,3 +1,4 @@
+import { Component } from '@angular/core';
 import type { ComponentFixture } from '@angular/core/testing';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
@@ -21,13 +22,30 @@ const ADMINISTRATOR: SessionRecord = {
   },
 };
 
-const api: AuthApi = {
-  login: vi.fn(async (): Promise<LoginAttempt> => ({ ok: true, session: ADMINISTRATOR })),
-  currentAccount: vi.fn(async (): Promise<AccountCheck> => ({
-    ok: true,
-    user: ADMINISTRATOR.user,
-  })),
+const RECEPTION: SessionRecord = {
+  accessToken: 'token-recepcion',
+  expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+  user: {
+    id: '6f1b1f2e-0000-4000-8000-000000000002',
+    email: 'recepcion@mousedent.local',
+    displayName: 'Recepción',
+    roles: ['Recepcion'],
+  },
 };
+
+const PROFESSIONAL: SessionRecord = {
+  accessToken: 'token-profesional',
+  expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+  user: {
+    id: '6f1b1f2e-0000-4000-8000-000000000003',
+    email: 'profesional@mousedent.local',
+    displayName: 'Profesional',
+    roles: ['Profesional'],
+  },
+};
+
+@Component({ template: '' })
+class BlankPage {}
 
 async function flush(fixture: ComponentFixture<unknown>): Promise<void> {
   await fixture.whenStable();
@@ -35,17 +53,32 @@ async function flush(fixture: ComponentFixture<unknown>): Promise<void> {
   await fixture.whenStable();
 }
 
-async function renderPanel(): Promise<{
+async function renderPanel(
+  session: SessionRecord = ADMINISTRATOR,
+  path = '/locales',
+): Promise<{
   fixture: ComponentFixture<PanelLayout>;
   session: SessionService;
   navigate: ReturnType<typeof vi.fn>;
 }> {
+  const api: AuthApi = {
+    login: vi.fn(async (): Promise<LoginAttempt> => ({ ok: true, session })),
+    currentAccount: vi.fn(async (): Promise<AccountCheck> => ({ ok: true, user: session.user })),
+  };
+
   TestBed.configureTestingModule({
-    providers: [provideRouter([]), { provide: AUTH_API, useValue: api }],
+    providers: [
+      provideRouter([
+        { path: 'locales', component: BlankPage },
+        { path: 'catalogo', component: BlankPage },
+      ]),
+      { provide: AUTH_API, useValue: api },
+    ],
   });
 
-  const session = TestBed.inject(SessionService);
-  await session.login('admin@mousedent.local', 'Admin123!');
+  const service = TestBed.inject(SessionService);
+  await service.login(session.user.email, 'Admin123!');
+  await TestBed.inject(Router).navigateByUrl(path);
 
   const navigate = vi
     .spyOn(TestBed.inject(Router), 'navigateByUrl')
@@ -54,7 +87,7 @@ async function renderPanel(): Promise<{
   const fixture = TestBed.createComponent(PanelLayout);
   await flush(fixture);
 
-  return { fixture, session, navigate };
+  return { fixture, session: service, navigate };
 }
 
 describe('PanelLayout', () => {
@@ -67,15 +100,39 @@ describe('PanelLayout', () => {
     localStorage.clear();
   });
 
-  it('muestra la cuenta autenticada y solo los destinos con pantalla', async () => {
+  it('muestra a administración la cuenta, los tres destinos y el rótulo de administración', async () => {
     const { fixture } = await renderPanel();
     const host = fixture.nativeElement as HTMLElement;
+    const sidebar = host.querySelector('aside')!;
 
     expect(host.textContent).toContain('Administrador');
-    expect(host.querySelector('a[href="/locales"]')).not.toBeNull();
-    expect(host.querySelector('a[href="/personal"]')).not.toBeNull();
-    expect(host.querySelectorAll('nav a').length).toBe(2);
-    expect(host.textContent).toContain('Administración');
+    expect(sidebar.querySelector('a[href="/locales"]')).not.toBeNull();
+    expect(sidebar.querySelector('a[href="/personal"]')).not.toBeNull();
+    expect(sidebar.querySelector('a[href="/catalogo"]')).not.toBeNull();
+    expect(sidebar.querySelectorAll('nav a').length).toBe(3);
+    expect(sidebar.textContent).toContain('Panel de administración');
+    expect(sidebar.textContent).toContain('Administración');
+    expect(sidebar.getAttribute('aria-label')).toBe('Panel de administración');
+    expect(host.querySelector('header')!.textContent).toMatch(/Administración\s*\/\s*Locales/);
+  });
+
+  it.each<[string, SessionRecord]>([
+    ['Recepción', RECEPTION],
+    ['Profesional', PROFESSIONAL],
+  ])('deja a %s solo el catálogo y sin rótulos de administración', async (_label, session) => {
+    const { fixture } = await renderPanel(session, '/catalogo');
+    const host = fixture.nativeElement as HTMLElement;
+    const sidebar = host.querySelector('aside')!;
+
+    expect(sidebar.getAttribute('aria-label')).toBe('Panel');
+    expect(sidebar.textContent).not.toContain('Administración');
+    expect(sidebar.querySelectorAll('nav a').length).toBe(1);
+    expect(sidebar.querySelector('a[href="/catalogo"]')).not.toBeNull();
+    expect(sidebar.querySelector('a[href="/locales"]')).toBeNull();
+    expect(sidebar.querySelector('a[href="/personal"]')).toBeNull();
+    expect(host.querySelector('header p')!.textContent!.replace(/\s+/g, ' ').trim()).toBe(
+      'Catálogo',
+    );
   });
 
   it('cierra la sesión y vuelve al acceso', async () => {

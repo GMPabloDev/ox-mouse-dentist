@@ -17,5 +17,5 @@ entradas de 48 px con radio 9 px, insignias de radio 7 px y el select de 40 px d
 un componente con el CLI devuelve los valores por defecto de Spartan y pierde esos ajustes.
 
 Los iconos de los componentes generados son SVG propios. El CLI añade `@ng-icons/core` y
-`@ng-icons/lucide` como dependencias; el proyecto no los usa, así que se quitan de `package.json`
-tras generar un componente que los importe.
+`@ng-icons/lucide` como dependencias; se quitan de `package.json` tras generar un componente que
+los importe, salvo que el componente los use. `sonner` los usa para los iconos de sus avisos.

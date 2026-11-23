@@ -11,7 +11,7 @@
   <aside
     class="fixed inset-y-0 left-0 z-50 flex w-64 flex-col overflow-y-auto border-r border-sidebar-border bg-sidebar px-4 py-6 transition-transform duration-200 ease-out motion-reduce:transition-none md:sticky md:top-0 md:h-dvh md:w-[244px] md:translate-x-0 md:transition-none"
     [class]="mobileOpen() ? 'translate-x-0' : '-translate-x-full'"
-    aria-label="Panel de administración"
+    [attr.aria-label]="admin() ? 'Panel de administración' : 'Panel'"
   >
     <div class="flex items-center gap-2.5 px-2 pb-6">
       <app-brand-mark class="h-9" />
@@ -47,40 +47,68 @@
       </span>
       <div class="min-w-0">
         <p class="truncate text-sm font-bold">MouseDent</p>
-        <p class="truncate text-xs text-muted-foreground">Panel de administración</p>
+        @if (admin()) {
+          <p class="truncate text-xs text-muted-foreground">Panel de administración</p>
+        }
       </div>
     </div>
 
-    <p
-      class="px-3 pb-2.5 text-[11px] font-extrabold tracking-[0.14em] text-muted-foreground uppercase"
-    >
-      Administración
-    </p>
+    @if (admin()) {
+      <p
+        class="px-3 pb-2.5 text-[11px] font-extrabold tracking-[0.14em] text-muted-foreground uppercase"
+      >
+        Administración
+      </p>
+    }
 
     <nav class="grid gap-1" aria-label="Navegación principal">
-      <a
-        class="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold text-sidebar-foreground transition-colors hover:bg-sidebar-accent/70 focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:outline-none"
-        routerLink="/locales"
-        routerLinkActive="bg-sidebar-accent text-sidebar-accent-foreground"
-      >
-        <svg
-          class="size-5 shrink-0"
-          aria-hidden="true"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.8"
-          stroke-linecap="round"
-          stroke-linejoin="round"
+      @if (admin()) {
+        <a
+          class="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold text-sidebar-foreground transition-colors hover:bg-sidebar-accent/70 focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:outline-none"
+          routerLink="/locales"
+          routerLinkActive="bg-sidebar-accent text-sidebar-accent-foreground"
         >
-          <path d="M4 21V5l8-3 8 3v16 M2 21h20 M9 21v-5h6v5 M8 7h1 M15 7h1 M8 11h1 M15 11h1" />
-        </svg>
-        <span>Locales</span>
-      </a>
+          <svg
+            class="size-5 shrink-0"
+            aria-hidden="true"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M4 21V5l8-3 8 3v16 M2 21h20 M9 21v-5h6v5 M8 7h1 M15 7h1 M8 11h1 M15 11h1" />
+          </svg>
+          <span>Locales</span>
+        </a>
+
+        <a
+          class="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold text-sidebar-foreground transition-colors hover:bg-sidebar-accent/70 focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:outline-none"
+          routerLink="/personal"
+          routerLinkActive="bg-sidebar-accent text-sidebar-accent-foreground"
+        >
+          <svg
+            class="size-5 shrink-0"
+            aria-hidden="true"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path
+              d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2 M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8 M22 21v-2a4 4 0 0 0-3-3.87 M16 3.13a4 4 0 0 1 0 7.75"
+            />
+          </svg>
+          <span>Personal</span>
+        </a>
+      }
 
       <a
         class="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold text-sidebar-foreground transition-colors hover:bg-sidebar-accent/70 focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:outline-none"
-        routerLink="/personal"
+        routerLink="/catalogo"
         routerLinkActive="bg-sidebar-accent text-sidebar-accent-foreground"
       >
         <svg
@@ -93,11 +121,9 @@
           stroke-linecap="round"
           stroke-linejoin="round"
         >
-          <path
-            d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2 M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8 M22 21v-2a4 4 0 0 0-3-3.87 M16 3.13a4 4 0 0 1 0 7.75"
-          />
+          <path d="M8 6h13 M8 12h13 M8 18h13 M3 6h.01 M3 12h.01 M3 18h.01" />
         </svg>
-        <span>Personal</span>
+        <span>Catálogo</span>
       </a>
     </nav>
 
@@ -162,8 +188,10 @@
       </button>
 
       <p class="flex items-center gap-2 text-sm text-muted-foreground">
-        <span>Administración</span>
-        <span aria-hidden="true">/</span>
+        @if (admin()) {
+          <span>Administración</span>
+          <span aria-hidden="true">/</span>
+        }
         <b class="font-semibold text-foreground">{{ section() }}</b>
       </p>
 
@@ -179,3 +207,10 @@
     </main>
   </div>
 </div>
+<hlm-toaster
+  class="mousedent-toaster"
+  position="top-center"
+  [richColors]="true"
+  [duration]="5000"
+  [closeButton]="true"
+/>
