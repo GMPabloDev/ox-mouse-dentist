@@ -65,7 +65,8 @@ public sealed class Profesional
     /// <summary>
     /// Cambia el número de colegiatura y las asignaciones. Se permite mientras haya
     /// especialidades o locales inactivos: esas asignaciones se conservan, pero no
-    /// se pueden añadir inactivos nuevos. No cambia el estado de la ficha.
+    /// se pueden añadir inactivos nuevos. No cambia el estado de la ficha, y una
+    /// ficha activa no puede quedarse por debajo del mínimo con el que se activa.
     /// </summary>
     public void Editar(
         string? colegiatura,
@@ -81,8 +82,8 @@ public sealed class Profesional
         var especialidades = PrepararAsignaciones(especialidadIds, nameof(especialidadIds));
         var locales = PrepararAsignaciones(localIds, nameof(localIds));
 
-        // Se comprueban las asignaciones nuevas antes de tocar el estado para que un
-        // rechazo no deje cambios parciales.
+        // Se comprueban las asignaciones nuevas y el mínimo de la ficha activa antes de
+        // tocar el estado para que un rechazo no deje cambios parciales.
         if (especialidades.Any(id => !_especialidadIds.Contains(id) && !activos.EsEspecialidadActiva(id)))
         {
             throw new InvalidOperationException("No se puede asignar una especialidad inactiva.");
@@ -91,6 +92,15 @@ public sealed class Profesional
         if (locales.Any(id => !_localIds.Contains(id) && !activos.EsLocalActivo(id)))
         {
             throw new InvalidOperationException("No se puede añadir un local de atención inactivo.");
+        }
+
+        // Una ficha activa mantiene el mínimo con el que se activó. Para vaciarla se
+        // desactiva antes. Una ficha inactiva sí puede quedarse sin asignaciones activas.
+        if (IsActive
+            && (!especialidades.Any(activos.EsEspecialidadActiva) || !locales.Any(activos.EsLocalActivo)))
+        {
+            throw new InvalidOperationException(
+                "Una ficha activa necesita al menos una especialidad activa y un local de atención activo.");
         }
 
         Colegiatura = numero?.Visible;
@@ -135,13 +145,14 @@ public sealed class Profesional
     /// <summary>
     /// Reconstruye la ficha desde el almacén. No aplica las reglas de edición ni la
     /// de activación: la persistencia ya contiene fichas válidas, incluso sin
-    /// especialidades activas, y el almacén solo traduce sus propios datos.
+    /// especialidades activas, y el almacén solo traduce sus propios datos. La clave
+    /// de unicidad se deriva del número visible para que nunca se guarden dos valores
+    /// incoherentes.
     /// </summary>
     public static Profesional Restaurar(
         Guid id,
         Guid staffAccountId,
         string? colegiatura,
-        string? colegiaturaNormalizada,
         bool isActive,
         IEnumerable<Guid> especialidadIds,
         IEnumerable<Guid> localIds)
@@ -154,19 +165,21 @@ public sealed class Profesional
             Id = id,
             StaffAccountId = staffAccountId,
             Colegiatura = colegiatura,
-            ColegiaturaNormalizada = colegiaturaNormalizada,
+            ColegiaturaNormalizada = string.IsNullOrWhiteSpace(colegiatura)
+                ? null
+                : DatosDeColegiatura.Normalizar(colegiatura),
             IsActive = isActive,
         };
 
-        ficha._especialidadIds.AddRange(especialidadIds.Distinct().OrderBy(id => id));
-        ficha._localIds.AddRange(localIds.Distinct().OrderBy(id => id));
+        ficha._especialidadIds.AddRange(especialidadIds.Distinct().OrderBy(especialidadId => especialidadId));
+        ficha._localIds.AddRange(localIds.Distinct().OrderBy(localId => localId));
 
         return ficha;
     }
 
     private static Guid[] PrepararAsignaciones(IEnumerable<Guid> ids, string parametro)
     {
-        var asignaciones = ids.Distinct().OrderBy(id => id).ToArray();
+        var asignaciones = ids.Distinct().OrderBy(asignado => asignado).ToArray();
         if (asignaciones.Any(id => id == Guid.Empty))
         {
             throw new ArgumentException("Los identificadores asignados deben ser válidos.", parametro);

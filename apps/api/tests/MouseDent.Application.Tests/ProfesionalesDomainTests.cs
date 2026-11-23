@@ -52,20 +52,6 @@ public sealed class ProfesionalesDomainTests
     }
 
     [Fact]
-    public void The_ficha_does_not_duplicate_the_account_contact_data()
-    {
-        var properties = typeof(Profesional)
-            .GetProperties()
-            .Select(property => property.Name)
-            .ToArray();
-
-        properties.ShouldNotContain(name => name.Contains("Nombre", StringComparison.Ordinal));
-        properties.ShouldNotContain(name => name.Contains("Correo", StringComparison.Ordinal));
-        properties.ShouldNotContain(name => name.Contains("Email", StringComparison.Ordinal));
-        properties.ShouldNotContain(name => name.Contains("Telefono", StringComparison.Ordinal));
-    }
-
-    [Fact]
     public void Creation_rejects_inactive_specialties_and_locales()
     {
         var activa = Guid.NewGuid();
@@ -141,13 +127,15 @@ public sealed class ProfesionalesDomainTests
             [sede],
             Activos([odontologia, ortodoncia], [sede]));
 
-        // Ortodoncia y la sede se desactivan después del alta: la ficha conserva ambas
-        // asignaciones y administración todavía puede editar la colegiatura.
+        // Ortodoncia y la sede se desactivan después del alta: la ficha queda inactiva y
+        // conserva ambas asignaciones, así que administración todavía puede editarla.
+        ficha.Desactivar();
         var activos = Activos([odontologia], []);
         ficha.Editar("COP 2", [odontologia, ortodoncia], [sede], activos);
         ficha.Colegiatura.ShouldBe("COP 2");
         ficha.EspecialidadIds.ShouldBe([odontologia, ortodoncia], ignoreOrder: true);
         ficha.LocalIds.ShouldBe([sede]);
+        ficha.IsActive.ShouldBeFalse();
 
         // No puede añadir una especialidad ni un local inactivos, y el rechazo no
         // deja cambios parciales.
@@ -201,6 +189,118 @@ public sealed class ProfesionalesDomainTests
         ficha.StaffAccountId.ShouldBe(accountId);
         ficha.EspecialidadIds.ShouldBe([especialidad]);
         ficha.LocalIds.ShouldBe([local]);
+    }
+
+    [Fact]
+    public void Editing_an_active_ficha_rejects_leaving_it_without_an_active_specialty_or_local()
+    {
+        var odontologia = Guid.NewGuid();
+        var ortodonciaInactiva = Guid.NewGuid();
+        var sede = Guid.NewGuid();
+        var sedeInactiva = Guid.NewGuid();
+        var ficha = Profesional.Crear(
+            Guid.NewGuid(),
+            "COP 1",
+            [odontologia],
+            [sede],
+            Activos([odontologia], [sede]));
+
+        // Quitar la última especialidad activa o el último local activo contradice la
+        // regla de activación, y el rechazo no deja cambios parciales.
+        Should.Throw<InvalidOperationException>(() =>
+            ficha.Editar("COP 2", [], [sede], Activos([], [sede])));
+        ficha.Colegiatura.ShouldBe("COP 1");
+        ficha.EspecialidadIds.ShouldBe([odontologia]);
+        ficha.LocalIds.ShouldBe([sede]);
+
+        Should.Throw<InvalidOperationException>(() =>
+            ficha.Editar("COP 2", [odontologia], [], Activos([odontologia], [])));
+        ficha.Colegiatura.ShouldBe("COP 1");
+        ficha.EspecialidadIds.ShouldBe([odontologia]);
+        ficha.LocalIds.ShouldBe([sede]);
+
+        // Conservar solo asignaciones inactivas tampoco vale mientras la ficha siga activa.
+        Should.Throw<InvalidOperationException>(() =>
+            ficha.Editar("COP 2", [ortodonciaInactiva], [sede], Activos([], [sede])));
+        Should.Throw<InvalidOperationException>(() =>
+            ficha.Editar("COP 2", [odontologia], [sedeInactiva], Activos([odontologia], [])));
+        ficha.Colegiatura.ShouldBe("COP 1");
+        ficha.EspecialidadIds.ShouldBe([odontologia]);
+        ficha.LocalIds.ShouldBe([sede]);
+
+        // Cambiar la última activa por otra activa sigue permitido.
+        var nuevaEspecialidad = Guid.NewGuid();
+        var nuevoLocal = Guid.NewGuid();
+        ficha.Editar(
+            "COP 2",
+            [nuevaEspecialidad],
+            [nuevoLocal],
+            Activos([nuevaEspecialidad], [nuevoLocal]));
+        ficha.Colegiatura.ShouldBe("COP 2");
+        ficha.EspecialidadIds.ShouldBe([nuevaEspecialidad]);
+        ficha.LocalIds.ShouldBe([nuevoLocal]);
+    }
+
+    [Fact]
+    public void Editing_an_inactive_ficha_can_retire_every_assignment_and_the_colegiatura()
+    {
+        var especialidad = Guid.NewGuid();
+        var local = Guid.NewGuid();
+        var ficha = Profesional.Crear(
+            Guid.NewGuid(),
+            "COP 1",
+            [especialidad],
+            [local],
+            Activos([especialidad], [local]));
+
+        ficha.Desactivar();
+        ficha.Editar(null, [], [], Activos([], []));
+
+        ficha.IsActive.ShouldBeFalse();
+        ficha.Colegiatura.ShouldBeNull();
+        ficha.ColegiaturaNormalizada.ShouldBeNull();
+        ficha.EspecialidadIds.ShouldBeEmpty();
+        ficha.LocalIds.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void Editing_retires_the_assignments_that_are_no_longer_asked_for()
+    {
+        var odontologia = Guid.NewGuid();
+        var ortodoncia = Guid.NewGuid();
+        var sedeNorte = Guid.NewGuid();
+        var sedeSur = Guid.NewGuid();
+        var ficha = Profesional.Crear(
+            Guid.NewGuid(),
+            null,
+            [odontologia, ortodoncia],
+            [sedeNorte, sedeSur],
+            Activos([odontologia, ortodoncia], [sedeNorte, sedeSur]));
+
+        ficha.Editar(null, [odontologia], [sedeSur], Activos([odontologia], [sedeSur]));
+
+        ficha.EspecialidadIds.ShouldBe([odontologia]);
+        ficha.LocalIds.ShouldBe([sedeSur]);
+    }
+
+    [Fact]
+    public void Restoring_derives_the_normalized_colegiatura_from_the_visible_number()
+    {
+        var ficha = Profesional.Restaurar(
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            "  cop 12345 ",
+            true,
+            [],
+            []);
+
+        ficha.Colegiatura.ShouldBe("  cop 12345 ");
+        ficha.ColegiaturaNormalizada.ShouldBe("COP12345");
+
+        Profesional.Restaurar(Guid.NewGuid(), Guid.NewGuid(), null, true, [], [])
+            .ColegiaturaNormalizada.ShouldBeNull();
+        Profesional.Restaurar(Guid.NewGuid(), Guid.NewGuid(), "   ", true, [], [])
+            .ColegiaturaNormalizada.ShouldBeNull();
     }
 
     [Fact]

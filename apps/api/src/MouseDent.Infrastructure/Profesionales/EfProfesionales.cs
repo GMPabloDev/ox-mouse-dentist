@@ -9,12 +9,23 @@ namespace MouseDent.Infrastructure.Profesionales;
 /// Implementa <see cref="IProfesionales"/> con EF Core. La ficha y la
 /// sincronización de sus especialidades y locales se guardan en un solo
 /// <c>SaveChanges</c>, así que una escritura rechazada no deja datos parciales. El
-/// choque de los índices únicos se traduce al resultado del contrato: la cuenta
-/// tiene como máximo una ficha y la colegiatura normalizada es única, también
-/// entre las fichas inactivas.
+/// choque de los índices únicos y el de los triggers de escritura se traduce al
+/// resultado del contrato: la cuenta tiene como máximo una ficha, la colegiatura
+/// normalizada es única, también entre las fichas inactivas, y una ficha activa no
+/// se queda sin una especialidad activa ni sin un local activo.
 /// </summary>
 public sealed class EfProfesionales(MouseDentDbContext database) : IProfesionales
 {
+    // Textos que produce la base y únicos que conoce este archivo. Los índices viven en
+    // la migración 20261123194253_Profesional y los triggers en
+    // 20261123201958_ProfesionalReglasDeEscritura; SQLite devuelve su nombre o su mensaje
+    // dentro del error de restricción. Al cambiar una migración hay que cambiar su constante.
+    private const string IndiceColegiaturaUnica = "Profesionales.ColegiaturaNormalizada";
+    private const string IndiceCuentaUnica = "Profesionales.StaffAccountId";
+    private const string TriggerEspecialidadInactiva = "profesional_especialidad_inactiva";
+    private const string TriggerLocalInactivo = "profesional_local_inactivo";
+    private const string TriggerActivacionIncompleta = "profesional_activacion_incompleta";
+
     public async Task<Profesional?> BuscarAsync(Guid id, CancellationToken cancellationToken)
     {
         var guardado = await Fichas().SingleOrDefaultAsync(ficha => ficha.Id == id, cancellationToken);
@@ -77,14 +88,29 @@ public sealed class EfProfesionales(MouseDentDbContext database) : IProfesionale
         {
             Rechazar(guardado);
 
-            if (EsChoqueDeColegiatura(exception))
+            if (EsRestriccion(exception, IndiceColegiaturaUnica))
             {
                 return ResultadoGuardadoProfesional.ColegiaturaDuplicada;
             }
 
-            if (EsChoqueDeCuenta(exception))
+            if (EsRestriccion(exception, IndiceCuentaUnica))
             {
                 return ResultadoGuardadoProfesional.CuentaYaVinculada;
+            }
+
+            if (EsRestriccion(exception, TriggerEspecialidadInactiva))
+            {
+                return ResultadoGuardadoProfesional.EspecialidadInactiva;
+            }
+
+            if (EsRestriccion(exception, TriggerLocalInactivo))
+            {
+                return ResultadoGuardadoProfesional.LocalInactivo;
+            }
+
+            if (EsRestriccion(exception, TriggerActivacionIncompleta))
+            {
+                return ResultadoGuardadoProfesional.ActivacionIncompleta;
             }
 
             throw;
@@ -102,7 +128,6 @@ public sealed class EfProfesionales(MouseDentDbContext database) : IProfesionale
             guardado.Id,
             guardado.StaffAccountId,
             guardado.Colegiatura,
-            guardado.ColegiaturaNormalizada,
             guardado.IsActive,
             guardado.Especialidades.Select(asignada => asignada.EspecialidadId),
             guardado.Locales.Select(asignado => asignado.LocalId));
@@ -172,11 +197,7 @@ public sealed class EfProfesionales(MouseDentDbContext database) : IProfesionale
         database.Entry(guardado).State = EntityState.Detached;
     }
 
-    private static bool EsChoqueDeColegiatura(DbUpdateException exception) =>
+    private static bool EsRestriccion(DbUpdateException exception, string texto) =>
         exception.InnerException is SqliteException { SqliteErrorCode: 19 } sqlite
-        && sqlite.Message.Contains("Profesionales.ColegiaturaNormalizada", StringComparison.Ordinal);
-
-    private static bool EsChoqueDeCuenta(DbUpdateException exception) =>
-        exception.InnerException is SqliteException { SqliteErrorCode: 19 } sqlite
-        && sqlite.Message.Contains("Profesionales.StaffAccountId", StringComparison.Ordinal);
+        && sqlite.Message.Contains(texto, StringComparison.Ordinal);
 }

@@ -45,4 +45,13 @@ public enum ResultadoGuardadoProfesional
 
     /// <summary>La cuenta ya tiene una ficha vinculada.</summary>
     CuentaYaVinculada,
+
+    /// <summary>La especialidad asignada está inactiva; solo se asignan especialidades activas.</summary>
+    EspecialidadInactiva,
+
+    /// <summary>El local asignado está inactivo; solo se añaden locales activos.</summary>
+    LocalInactivo,
+
+    /// <summary>La ficha quedaría activa sin una especialidad activa o sin un local activo.</summary>
+    ActivacionIncompleta,
 }
