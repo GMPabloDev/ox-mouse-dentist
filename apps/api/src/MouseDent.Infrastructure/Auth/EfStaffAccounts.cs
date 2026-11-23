@@ -116,7 +116,7 @@ public sealed class EfStaffAccounts(UserManager<StaffUser> users, MouseDentDbCon
             // Sin contraseña: la cuenta queda pendiente hasta que la persona la establezca.
             created = await users.CreateAsync(user);
         }
-        catch (DbUpdateException exception) when (SqliteConstraint.IsViolation(exception))
+        catch (DbUpdateException exception) when (SqliteAccountUniqueness.IsDuplicate(exception))
         {
             return StaffSaveResult.DuplicateEmail;
         }
@@ -200,7 +200,7 @@ public sealed class EfStaffAccounts(UserManager<StaffUser> users, MouseDentDbCon
         {
             updated = await users.UpdateAsync(user);
         }
-        catch (DbUpdateException exception) when (SqliteConstraint.IsViolation(exception))
+        catch (DbUpdateException exception) when (SqliteAccountUniqueness.IsDuplicate(exception))
         {
             return StaffSaveResult.DuplicateEmail;
         }

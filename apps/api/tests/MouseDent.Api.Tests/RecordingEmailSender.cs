@@ -15,6 +15,12 @@ internal sealed partial class RecordingEmailSender : IEmailSender
     /// <summary>Direcciones cuyo envío falla, como un servidor que rechaza el destinatario.</summary>
     public List<string> FailingAddresses { get; } = [];
 
+    /// <summary>
+    /// Direcciones cuyo envío falla por una causa que no es del protocolo SMTP, como
+    /// un adaptador mal configurado. El correo no llega a salir.
+    /// </summary>
+    public List<string> BrokenAdapterAddresses { get; } = [];
+
     public bool FailsEverySend { get; set; }
 
     public IReadOnlyList<EmailMessage> Sent
@@ -30,6 +36,11 @@ internal sealed partial class RecordingEmailSender : IEmailSender
 
     public Task SendAsync(EmailMessage message, CancellationToken cancellationToken)
     {
+        if (BrokenAdapterAddresses.Contains(message.To, StringComparer.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("El adaptador de correo de prueba falló fuera del protocolo SMTP.");
+        }
+
         if (FailsEverySend || FailingAddresses.Contains(message.To, StringComparer.OrdinalIgnoreCase))
         {
             throw new EmailDeliveryException("El servidor SMTP de prueba rechazó el envío.");

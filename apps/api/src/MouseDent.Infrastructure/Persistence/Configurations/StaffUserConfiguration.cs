@@ -18,6 +18,14 @@ public sealed class StaffUserConfiguration : IEntityTypeConfiguration<StaffUser>
             .HasMaxLength(40)
             .IsRequired();
 
+        // El correo identifica la cuenta también en la base: el índice «EmailIndex»
+        // que Identity crea sobre el correo normalizado pasa a ser único. Así dos
+        // altas simultáneas con el mismo correo no dependen de la comprobación previa
+        // de Identity ni del orden de escritura. SQLite admite varios correos nulos.
+        builder.HasIndex(user => user.NormalizedEmail)
+            .HasDatabaseName("EmailIndex")
+            .IsUnique();
+
         builder.HasMany(user => user.Assignments)
             .WithOne(assignment => assignment.User)
             .HasForeignKey(assignment => assignment.UserId)

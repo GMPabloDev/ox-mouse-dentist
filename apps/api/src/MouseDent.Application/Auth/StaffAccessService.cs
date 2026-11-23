@@ -20,10 +20,12 @@ public sealed class StaffAccessService(
 {
     /// <summary>
     /// Envía una invitación a la cuenta. Devuelve <c>false</c> cuando el correo no
-    /// se pudo entregar; el enlace anterior ya no sirve en ese caso. El resultado
-    /// queda guardado en la cuenta como marca del último envío fallido, que dura
-    /// hasta que un envío se entregue, la cuenta establezca su contraseña o cambie
-    /// su correo. Registrar o limpiar la marca no cambia la versión de sesión.
+    /// se pudo entregar, tanto si lo rechaza el servidor como si el envío falla antes
+    /// de salir; el enlace anterior ya no sirve en ese caso. El resultado queda
+    /// guardado en la cuenta como marca del último envío fallido, que dura hasta que
+    /// un envío se entregue, la cuenta establezca su contraseña o cambie su correo.
+    /// Registrar o limpiar la marca no cambia la versión de sesión. La cancelación de
+    /// quien solicitó se propaga sin marcar la cuenta.
     /// </summary>
     public async Task<bool> SendInvitationAsync(StaffAccount account, CancellationToken cancellationToken)
     {
@@ -105,8 +107,15 @@ public sealed class StaffAccessService(
             await email.SendAsync(message, cancellationToken);
             return true;
         }
-        catch (EmailDeliveryException)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
+            // Quien solicitó canceló: no es un fallo de entrega y no se marca la cuenta.
+            throw;
+        }
+        catch (Exception)
+        {
+            // Cualquier otro fallo deja la invitación sin entregar, aunque no venga del
+            // protocolo SMTP: el enlace ya no sirve y la marca del fallo se registra.
             return false;
         }
     }

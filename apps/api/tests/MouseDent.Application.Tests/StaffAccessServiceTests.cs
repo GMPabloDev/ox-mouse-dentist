@@ -67,6 +67,69 @@ public sealed class StaffAccessServiceTests
     }
 
     [Fact]
+    public async Task An_invitation_that_does_not_leave_is_marked_on_the_account()
+    {
+        var account = StaffSamples.Pending(StaffRole.Reception);
+        var accounts = new FakeStaffAccounts(account);
+
+        await Service(accounts, new FakeAccessLinks(), new FakeEmailSender { Fails = true })
+            .SendInvitationAsync(account, TestContext.Current.CancellationToken);
+
+        var (accountId, failedAt) = accounts.InvitationFailures.ShouldHaveSingleItem();
+        accountId.ShouldBe(account.Id);
+        failedAt.ShouldBe(StaffSamples.EstablishedAt);
+        accounts.ClearedInvitationFailures.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task A_delivered_invitation_clears_the_previous_failure_mark()
+    {
+        var account = StaffSamples.Pending(StaffRole.Reception);
+        var accounts = new FakeStaffAccounts(account);
+
+        var sent = await Service(accounts, new FakeAccessLinks(), new FakeEmailSender())
+            .SendInvitationAsync(account, TestContext.Current.CancellationToken);
+
+        sent.ShouldBeTrue();
+        accounts.ClearedInvitationFailures.ShouldBe([account.Id]);
+        accounts.InvitationFailures.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task A_send_that_fails_for_another_reason_counts_as_an_undelivered_invitation()
+    {
+        var account = StaffSamples.Pending(StaffRole.Reception);
+        var accounts = new FakeStaffAccounts(account);
+        var email = new FakeEmailSender
+        {
+            Throws = () => new InvalidOperationException("El adaptador de correo no está configurado."),
+        };
+
+        var sent = await Service(accounts, new FakeAccessLinks(), email)
+            .SendInvitationAsync(account, TestContext.Current.CancellationToken);
+
+        sent.ShouldBeFalse();
+        accounts.InvitationFailures.ShouldHaveSingleItem().AccountId.ShouldBe(account.Id);
+        accounts.ClearedInvitationFailures.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task A_cancelled_send_propagates_and_does_not_record_a_failure()
+    {
+        var account = StaffSamples.Pending(StaffRole.Reception);
+        var accounts = new FakeStaffAccounts(account);
+        using var cancellation = new CancellationTokenSource();
+        await cancellation.CancelAsync();
+
+        await Should.ThrowAsync<OperationCanceledException>(() =>
+            Service(accounts, new FakeAccessLinks(), new FakeEmailSender())
+                .SendInvitationAsync(account, cancellation.Token));
+
+        accounts.InvitationFailures.ShouldBeEmpty();
+        accounts.ClearedInvitationFailures.ShouldBeEmpty();
+    }
+
+    [Fact]
     public async Task A_recovery_request_sends_a_link_to_an_active_account()
     {
         var account = StaffSamples.Account(StaffRole.Reception, "persona@mousedent.local");

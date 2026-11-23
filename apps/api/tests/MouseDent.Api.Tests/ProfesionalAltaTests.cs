@@ -2,6 +2,8 @@ using System.Net;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using MouseDent.Application.Auth;
 using MouseDent.Application.Profesionales;
 using MouseDent.Domain.Auth;
 using MouseDent.Domain.Catalogo;
@@ -100,6 +102,37 @@ public sealed class ProfesionalAltaTests(MouseDentApiFactory factory) : IClassFi
         using var anonymous = factory.CreateClient();
         using var completion = await StaffTestHelpers.ResetPasswordAsync(anonymous, token!, NewPassword);
         completion.StatusCode.ShouldBe(HttpStatusCode.NoContent);
+    }
+
+    [Fact]
+    public async Task An_unexpected_failure_of_the_send_counts_as_an_invitation_that_did_not_leave()
+    {
+        var especialidad = await SeedEspecialidadAsync();
+        var local = await SeedLocalAsync();
+        var email = StaffTestHelpers.UniqueEmail("alta.error");
+        factory.Emails.BrokenAdapterAddresses.Add(email);
+
+        var outcome = await RegisterAsync(email, especialidad, local);
+        factory.Emails.BrokenAdapterAddresses.Remove(email);
+
+        // La cuenta y la ficha ya estaban confirmadas: el fallo no las deshace y deja la marca.
+        outcome.Status.ShouldBe(ProfesionalAltaStatus.InvitationFailed);
+        var ficha = outcome.Ficha.ShouldNotBeNull();
+        (await FichaRowAsync(ficha.Id)).ShouldNotBeNull();
+        var account = await AccountByEmailAsync(email);
+        account.ShouldNotBeNull();
+        account.InvitationFailedAt.ShouldNotBeNull();
+        account.SessionVersion.ShouldBe(1);
+        factory.Emails.SentTo(email).ShouldBeEmpty();
+
+        // El reenvío traduce igual un fallo que no es del protocolo y conserva la marca.
+        factory.Emails.BrokenAdapterAddresses.Add(email);
+        var resend = await ResendAsync(ficha.Id);
+        factory.Emails.BrokenAdapterAddresses.Remove(email);
+
+        resend.Status.ShouldBe(ProfesionalInvitationStatus.DeliveryFailed);
+        (await AccountByEmailAsync(email))!.InvitationFailedAt.ShouldNotBeNull();
+        factory.Emails.SentTo(email).ShouldBeEmpty();
     }
 
     [Fact]
@@ -217,6 +250,42 @@ public sealed class ProfesionalAltaTests(MouseDentApiFactory factory) : IClassFi
         repeated.Ficha.ShouldBeNull();
         (await AccountByEmailAsync(repeatedEmail)).ShouldBeNull();
         factory.Emails.SentTo(repeatedEmail).ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task A_linked_account_rejected_by_the_colegiatura_leaves_no_ficha_and_keeps_the_account()
+    {
+        var especialidad = await SeedEspecialidadAsync();
+        var local = await SeedLocalAsync();
+        var colegiatura = "COP " + Guid.NewGuid().ToString("N")[..8];
+
+        var first = await RegisterAsync(
+            StaffTestHelpers.UniqueEmail("vinculo.colegiatura"),
+            especialidad,
+            local,
+            colegiatura);
+        first.Status.ShouldBe(ProfesionalAltaStatus.Saved);
+
+        // La cuenta existe desde antes, sin ficha: el rechazo llega en la escritura de
+        // la ficha y la transacción tiene que deshacerla.
+        var email = StaffTestHelpers.UniqueEmail("vinculo.repetida");
+        var accountId = await SeedPendingProfessionalAsync(email);
+
+        var repeated = await RegisterAsync(email, especialidad, local, colegiatura.ToLowerInvariant());
+
+        repeated.Status.ShouldBe(ProfesionalAltaStatus.DuplicateColegiatura);
+        repeated.Ficha.ShouldBeNull();
+        (await CountFichasOfEmailAsync(email)).ShouldBe(0);
+        factory.Emails.SentTo(email).ShouldBeEmpty();
+
+        var account = await AccountByIdAsync(accountId);
+        account.ShouldNotBeNull();
+        account.Profile.ShouldBe(StaffRole.Professional);
+        account.IsActive.ShouldBeTrue();
+        account.PasswordEstablishedAt.ShouldBeNull();
+        account.SessionVersion.ShouldBe(1);
+        account.InvitationFailedAt.ShouldBeNull();
+        account.DisplayName.ShouldBe("Cuenta pendiente de pruebas");
     }
 
     [Fact]
@@ -353,6 +422,11 @@ public sealed class ProfesionalAltaTests(MouseDentApiFactory factory) : IClassFi
         var inactiveAccounts = await ListAsync(new ProfesionalFiltro { AccountStatus = EstadoDeCuenta.Inactiva });
         inactiveAccounts.ShouldContain(resumen => resumen.Id == inactiveFicha.Id);
         inactiveAccounts.ShouldAllBe(resumen => resumen.AccountStatus == EstadoDeCuenta.Inactiva);
+
+        var activeAccounts = await ListAsync(new ProfesionalFiltro { AccountStatus = EstadoDeCuenta.Activa });
+        activeAccounts.ShouldContain(resumen => resumen.Id == activeFicha.Id);
+        activeAccounts.ShouldNotContain(resumen => resumen.Id == pendingFicha.Id);
+        activeAccounts.ShouldAllBe(resumen => resumen.AccountStatus == EstadoDeCuenta.Activa);
 
         var inactiveFichas = await ListAsync(new ProfesionalFiltro { FichaActiva = false });
         inactiveFichas.ShouldContain(resumen => resumen.Id == inactiveFicha.Id);
@@ -575,8 +649,12 @@ public sealed class ProfesionalAltaTests(MouseDentApiFactory factory) : IClassFi
 
 /// <summary>
 /// Alta simultánea con el mismo correo. Necesita conexiones independientes, así que
-/// usa la base en archivo: una solicitud gana el correo y la otra lo encuentra
-/// ocupado, sin dejar dos cuentas ni dos fichas.
+/// usa la base en archivo: una solicitud gana el correo y la otra se rechaza, sin
+/// dejar dos cuentas ni dos fichas. El motivo del rechazo depende del intercalado: si
+/// la solicitud perdedora lee antes del commit choca con el índice único del correo y
+/// si lee después entra por el vínculo y encuentra la cuenta ya vinculada. Las dos
+/// respuestas son correctas, así que la prueba asevera la invariante en lugar de
+/// fijar un camino.
 /// </summary>
 public sealed class ProfesionalAltaConcurrencyTests(MouseDentApiFileDatabaseFactory factory)
     : IClassFixture<MouseDentApiFileDatabaseFactory>
@@ -586,7 +664,7 @@ public sealed class ProfesionalAltaConcurrencyTests(MouseDentApiFileDatabaseFact
     [Fact]
     public async Task Two_simultaneous_alta_with_the_same_email_leave_one_account_and_one_ficha()
     {
-        var (especialidad, local) = await SeedAsync();
+        var (especialidad, local) = await AltaConcurrency.SeedAsync(factory);
         var email = StaffTestHelpers.UniqueEmail("alta.simultanea");
 
         using var gate = new ManualResetEventSlim();
@@ -596,17 +674,7 @@ public sealed class ProfesionalAltaConcurrencyTests(MouseDentApiFileDatabaseFact
             await Task.Yield();
             gate.Wait(Token);
 
-            await using var scope = factory.Services.CreateAsyncScope();
-            var service = scope.ServiceProvider.GetRequiredService<ProfesionalManagementService>();
-
-            return await service.RegisterAsync(
-                new ProfesionalAltaCommand(
-                    "Profesional simultáneo",
-                    email,
-                    colegiatura,
-                    [especialidad],
-                    [local]),
-                Token);
+            return await AltaConcurrency.RegisterAsync(factory, email, especialidad, local, colegiatura);
         }
 
         var first = Task.Run(() => RegisterAsync("COP SIM 1"), Token);
@@ -616,22 +684,138 @@ public sealed class ProfesionalAltaConcurrencyTests(MouseDentApiFileDatabaseFact
         var results = await Task.WhenAll(first, second);
 
         results.Count(outcome => outcome.Status is ProfesionalAltaStatus.Saved).ShouldBe(1);
-        results.Count(outcome => outcome.Status is ProfesionalAltaStatus.DuplicateEmail).ShouldBe(1);
+        var rejected = results
+            .Where(outcome => outcome.Status is not ProfesionalAltaStatus.Saved)
+            .ShouldHaveSingleItem();
+        rejected.Status.ShouldBeOneOf(
+            ProfesionalAltaStatus.DuplicateEmail,
+            ProfesionalAltaStatus.AccountAlreadyLinked);
+        rejected.Ficha.ShouldBeNull();
 
-        await using var scope = factory.Services.CreateAsyncScope();
-        var database = scope.ServiceProvider.GetRequiredService<MouseDentDbContext>();
-        var account = await database.Users
-            .AsNoTracking()
-            .SingleOrDefaultAsync(user => user.Email == email, Token);
+        await AltaConcurrency.AssertOneAccountAndOneFichaAsync(factory, email);
+        factory.Emails.SentTo(email).ShouldHaveSingleItem();
+    }
+}
 
-        account.ShouldNotBeNull();
-        account.PasswordEstablishedAt.ShouldBeNull();
-        (await database.Profesionales.CountAsync(ficha => ficha.StaffAccountId == account.Id, Token))
-            .ShouldBe(1);
+/// <summary>
+/// El mismo alta simultánea, con el intercalado forzado: la solicitud perdedora hace
+/// su lectura después de que la ganadora confirmó, así que entra por el vínculo y
+/// encuentra la cuenta con ficha. Fija el rechazo que la prueba concurrente deja al
+/// azar y comprueba que la invariante se mantiene igual.
+/// </summary>
+public sealed class ProfesionalAltaInterleavingTests
+{
+    private static CancellationToken Token => TestContext.Current.CancellationToken;
+
+    [Fact]
+    public async Task An_alta_that_reads_after_the_winner_committed_is_rejected_as_already_linked()
+    {
+        using var factory = new InterleavingAltaFactory();
+        var (especialidad, local) = await AltaConcurrency.SeedAsync(factory);
+        var email = StaffTestHelpers.UniqueEmail("alta.intercalada");
+
+        ProfesionalAltaOutcome? winner = null;
+        factory.BeforeFirstRead = async () =>
+            winner = await AltaConcurrency.RegisterAsync(factory, email, especialidad, local, "COP INT 1");
+
+        var loser = await AltaConcurrency.RegisterAsync(factory, email, especialidad, local, "COP INT 2");
+
+        winner.ShouldNotBeNull();
+        winner.Status.ShouldBe(ProfesionalAltaStatus.Saved);
+        loser.Status.ShouldBe(ProfesionalAltaStatus.AccountAlreadyLinked);
+        loser.Ficha.ShouldBeNull();
+
+        await AltaConcurrency.AssertOneAccountAndOneFichaAsync(factory, email);
         factory.Emails.SentTo(email).ShouldHaveSingleItem();
     }
 
-    private async Task<(Guid Especialidad, Guid Local)> SeedAsync()
+    /// <summary>
+    /// Decorado sobre el almacén real de cuentas: la primera lectura de la cuenta corre
+    /// un alta completa antes de devolver su resultado, de modo que quien lee encuentra
+    /// lo que la otra solicitud ya confirmó.
+    /// </summary>
+    private sealed class InterleavingAltaFactory() : MouseDentApiFactoryBase(useFileDatabase: true)
+    {
+        private Func<Task>? _beforeFirstRead;
+
+        public Func<Task>? BeforeFirstRead { set => _beforeFirstRead = value; }
+
+        protected override void ConfigureTestServices(IServiceCollection services)
+        {
+            services.RemoveAll<IStaffAccounts>();
+            services.AddScoped<EfStaffAccounts>();
+            services.AddScoped<IStaffAccounts>(provider => new InterleavingAccounts(
+                provider.GetRequiredService<EfStaffAccounts>())
+            {
+                BeforeFirstRead = async () =>
+                {
+                    var action = Interlocked.Exchange(ref _beforeFirstRead, null);
+                    if (action is not null)
+                    {
+                        await action();
+                    }
+                },
+            });
+        }
+    }
+
+    private sealed class InterleavingAccounts(IStaffAccounts inner) : IStaffAccounts
+    {
+        private Func<Task>? _beforeFirstRead;
+
+        public Func<Task>? BeforeFirstRead { set => _beforeFirstRead = value; }
+
+        public async Task<StaffAccount?> FindByEmailAsync(string email, CancellationToken cancellationToken)
+        {
+            var interleave = Interlocked.Exchange(ref _beforeFirstRead, null);
+            if (interleave is not null)
+            {
+                await interleave();
+            }
+
+            return await inner.FindByEmailAsync(email, cancellationToken);
+        }
+
+        public Task<StaffAccount?> ValidateCredentialsAsync(
+            string email,
+            string password,
+            CancellationToken cancellationToken) =>
+            inner.ValidateCredentialsAsync(email, password, cancellationToken);
+
+        public Task<StaffAccount?> FindByIdAsync(Guid id, CancellationToken cancellationToken) =>
+            inner.FindByIdAsync(id, cancellationToken);
+
+        public Task<IReadOnlyList<StaffAccount>> ListAsync(
+            string? search,
+            CancellationToken cancellationToken) =>
+            inner.ListAsync(search, cancellationToken);
+
+        public Task<StaffSaveResult> CreateAsync(StaffAccount account, CancellationToken cancellationToken) =>
+            inner.CreateAsync(account, cancellationToken);
+
+        public Task<StaffSaveResult> UpdateAsync(
+            StaffAccount account,
+            StaffAccount expected,
+            CancellationToken cancellationToken) =>
+            inner.UpdateAsync(account, expected, cancellationToken);
+
+        public Task RecordInvitationFailureAsync(
+            Guid accountId,
+            DateTime failedAt,
+            CancellationToken cancellationToken) =>
+            inner.RecordInvitationFailureAsync(accountId, failedAt, cancellationToken);
+
+        public Task ClearInvitationFailureAsync(Guid accountId, CancellationToken cancellationToken) =>
+            inner.ClearInvitationFailureAsync(accountId, cancellationToken);
+    }
+}
+
+/// <summary>Siembra y alta compartidas por las pruebas de concurrencia del alta.</summary>
+internal static class AltaConcurrency
+{
+    private static CancellationToken Token => TestContext.Current.CancellationToken;
+
+    public static async Task<(Guid Especialidad, Guid Local)> SeedAsync(MouseDentApiFactoryBase factory)
     {
         await using var scope = factory.Services.CreateAsyncScope();
         var database = scope.ServiceProvider.GetRequiredService<MouseDentDbContext>();
@@ -645,5 +829,41 @@ public sealed class ProfesionalAltaConcurrencyTests(MouseDentApiFileDatabaseFact
         await database.SaveChangesAsync(Token);
 
         return (especialidad.Id, local.Id);
+    }
+
+    public static async Task<ProfesionalAltaOutcome> RegisterAsync(
+        MouseDentApiFactoryBase factory,
+        string email,
+        Guid especialidadId,
+        Guid localId,
+        string? colegiatura)
+    {
+        await using var scope = factory.Services.CreateAsyncScope();
+        var service = scope.ServiceProvider.GetRequiredService<ProfesionalManagementService>();
+
+        return await service.RegisterAsync(
+            new ProfesionalAltaCommand(
+                "Profesional simultáneo",
+                email,
+                colegiatura,
+                [especialidadId],
+                [localId]),
+            Token);
+    }
+
+    /// <summary>La invariante del alta: una cuenta pendiente, una ficha y la cuenta como estaba.</summary>
+    public static async Task AssertOneAccountAndOneFichaAsync(MouseDentApiFactoryBase factory, string email)
+    {
+        await using var scope = factory.Services.CreateAsyncScope();
+        var database = scope.ServiceProvider.GetRequiredService<MouseDentDbContext>();
+        var accounts = await database.Users
+            .AsNoTracking()
+            .Where(user => user.Email == email)
+            .ToListAsync(Token);
+        var account = accounts.ShouldHaveSingleItem();
+
+        account.PasswordEstablishedAt.ShouldBeNull();
+        (await database.Profesionales.CountAsync(ficha => ficha.StaffAccountId == account.Id, Token))
+            .ShouldBe(1);
     }
 }

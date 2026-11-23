@@ -153,8 +153,21 @@ internal sealed class FakeEmailSender : IEmailSender
     /// <summary>Cuando es <c>true</c>, el envío falla como un servidor SMTP caído.</summary>
     public bool Fails { get; init; }
 
+    /// <summary>
+    /// Fallo que no es del protocolo SMTP, como un adaptador mal configurado. El
+    /// envío no llega a salir y la excepción no es de entrega.
+    /// </summary>
+    public Func<Exception>? Throws { get; init; }
+
     public Task SendAsync(EmailMessage message, CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (Throws is { } failure)
+        {
+            throw failure();
+        }
+
         if (Fails)
         {
             throw new EmailDeliveryException("El servidor SMTP de prueba rechazó el envío.");

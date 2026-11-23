@@ -454,4 +454,101 @@ public sealed class ProfesionalManagementServiceTests
         outcome.Status.ShouldBe(ProfesionalInvitationStatus.ProfessionalNotFound);
         email.Sent.ShouldBeEmpty();
     }
+
+    [Fact]
+    public async Task The_list_delegates_to_the_read_model_with_the_filter_it_received()
+    {
+        var account = StaffSamples.Pending(StaffRole.Professional, "listada@mousedent.test");
+        var resumen = new ProfesionalResumen(
+            Guid.NewGuid(),
+            account.Id,
+            "Persona listada",
+            account.Email,
+            null,
+            "COP 1",
+            IsActive: true,
+            EstadoDeCuenta.Pendiente,
+            InvitationFailed: true,
+            [],
+            []);
+        var listado = new FakeListadoDeProfesionales(resumen);
+        var service = ProfesionalSamples.Service(
+            new FakeAltaStore(),
+            new FakeStaffAccounts(account),
+            new FakeCatalogo(),
+            new FakeLocalStore(),
+            listado: listado);
+        var filtro = new ProfesionalFiltro
+        {
+            Search = "persona",
+            AccountStatus = EstadoDeCuenta.Pendiente,
+            FichaActiva = true,
+        };
+
+        var listed = await service.ListAsync(filtro, Token);
+
+        listed.ShouldHaveSingleItem().ShouldBe(resumen);
+        listado.Received.ShouldHaveSingleItem().ShouldBeSameAs(filtro);
+    }
+
+    [Theory]
+    [InlineData(ResultadoEscrituraAlta.CuentaNoEncontrada, ProfesionalAltaStatus.AccountNotFound)]
+    [InlineData(ResultadoEscrituraAlta.PerfilIncorrecto, ProfesionalAltaStatus.WrongProfile)]
+    [InlineData(ResultadoEscrituraAlta.CuentaYaVinculada, ProfesionalAltaStatus.AccountAlreadyLinked)]
+    public async Task A_write_rejection_of_the_link_is_reported_as_its_status(
+        ResultadoEscrituraAlta writeResult,
+        ProfesionalAltaStatus expected)
+    {
+        var especialidad = ProfesionalSamples.NuevaEspecialidad("Odontología");
+        var local = StaffSamples.NewLocal("Sede Centro");
+        var account = StaffSamples.Pending(StaffRole.Professional, "vinculo@mousedent.test");
+        var altas = new FakeAltaStore { Result = writeResult };
+        var email = new FakeEmailSender();
+        var service = ProfesionalSamples.Service(
+            altas,
+            new FakeStaffAccounts(account),
+            new FakeCatalogo(especialidad),
+            new FakeLocalStore(local),
+            email: email);
+
+        var outcome = await service.RegisterAsync(
+            ProfesionalSamples.Command("vinculo@mousedent.test", [especialidad.Id], [local.Id]),
+            Token);
+
+        outcome.Status.ShouldBe(expected);
+        outcome.Ficha.ShouldBeNull();
+        altas.Linked.ShouldBeEmpty();
+        email.Sent.ShouldBeEmpty();
+    }
+
+    [Theory]
+    [InlineData(ResultadoEscrituraAlta.EspecialidadInactiva, ProfesionalAltaStatus.EspecialidadInactiva)]
+    [InlineData(ResultadoEscrituraAlta.LocalInactivo, ProfesionalAltaStatus.LocalInactivo)]
+    [InlineData(ResultadoEscrituraAlta.ActivacionIncompleta, ProfesionalAltaStatus.ActivacionIncompleta)]
+    public async Task A_write_rejection_of_the_ficha_rules_is_reported_as_its_status(
+        ResultadoEscrituraAlta writeResult,
+        ProfesionalAltaStatus expected)
+    {
+        // El catálogo estaba activo al leer: la regla se descubre al escribir, no antes.
+        var especialidad = ProfesionalSamples.NuevaEspecialidad("Odontología");
+        var local = StaffSamples.NewLocal("Sede Centro");
+        var altas = new FakeAltaStore { Result = writeResult };
+        var accounts = new FakeStaffAccounts();
+        var email = new FakeEmailSender();
+        var service = ProfesionalSamples.Service(
+            altas,
+            accounts,
+            new FakeCatalogo(especialidad),
+            new FakeLocalStore(local),
+            email: email);
+
+        var outcome = await service.RegisterAsync(
+            ProfesionalSamples.Command("regla@mousedent.test", [especialidad.Id], [local.Id]),
+            Token);
+
+        outcome.Status.ShouldBe(expected);
+        outcome.Ficha.ShouldBeNull();
+        email.Sent.ShouldBeEmpty();
+        accounts.InvitationFailures.ShouldBeEmpty();
+    }
 }

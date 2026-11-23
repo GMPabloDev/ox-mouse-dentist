@@ -51,19 +51,26 @@ public sealed class EfListadoDeProfesionales(MouseDentDbContext database) : ILis
             filas = filas.Where(fila => fila.Ficha.IsActive == fichaActiva);
         }
 
+        // El estado visible de la cuenta se define una sola vez: la inactiva prevalece
+        // sobre la pendiente y la pendiente sobre la activa. El filtro y el resumen lo
+        // usan desde esta proyección, así que no hay dos versiones de la regla.
+        var conEstado = filas.Select(fila => new
+        {
+            fila.Ficha,
+            fila.Cuenta,
+            Estado = !fila.Cuenta.IsActive
+                ? EstadoDeCuenta.Inactiva
+                : fila.Cuenta.PasswordEstablishedAt == null
+                    ? EstadoDeCuenta.Pendiente
+                    : EstadoDeCuenta.Activa,
+        });
+
         if (filtro.AccountStatus is { } estado)
         {
-            filas = estado switch
-            {
-                EstadoDeCuenta.Pendiente => filas.Where(fila =>
-                    fila.Cuenta.IsActive && fila.Cuenta.PasswordEstablishedAt == null),
-                EstadoDeCuenta.Activa => filas.Where(fila =>
-                    fila.Cuenta.IsActive && fila.Cuenta.PasswordEstablishedAt != null),
-                _ => filas.Where(fila => !fila.Cuenta.IsActive),
-            };
+            conEstado = conEstado.Where(fila => fila.Estado == estado);
         }
 
-        return await filas
+        return await conEstado
             .OrderBy(fila => fila.Cuenta.DisplayName)
             .ThenBy(fila => fila.Cuenta.Email)
             .Select(fila => new ProfesionalResumen(
@@ -74,14 +81,9 @@ public sealed class EfListadoDeProfesionales(MouseDentDbContext database) : ILis
                 fila.Cuenta.PhoneNumber,
                 fila.Ficha.Colegiatura,
                 fila.Ficha.IsActive,
-                !fila.Cuenta.IsActive
-                    ? EstadoDeCuenta.Inactiva
-                    : fila.Cuenta.PasswordEstablishedAt == null
-                        ? EstadoDeCuenta.Pendiente
-                        : EstadoDeCuenta.Activa,
-                fila.Cuenta.IsActive
-                    && fila.Cuenta.PasswordEstablishedAt == null
-                    && fila.Cuenta.InvitationFailedAt != null,
+                fila.Estado,
+                // La marca solo se informa mientras la cuenta siga pendiente.
+                fila.Estado == EstadoDeCuenta.Pendiente && fila.Cuenta.InvitationFailedAt != null,
                 fila.Ficha.Especialidades
                     .Join(
                         database.Especialidades,

@@ -41,7 +41,7 @@ public sealed class EfAltasDeProfesionales(
             // Sin contraseña: la cuenta queda pendiente hasta que la persona use el enlace.
             created = await users.CreateAsync(StaffUserFactory.Nuevo(cuenta));
         }
-        catch (DbUpdateException exception) when (SqliteConstraint.IsViolation(exception))
+        catch (DbUpdateException exception) when (SqliteAccountUniqueness.IsDuplicate(exception))
         {
             // Otra alta simultánea insertó el mismo correo entre la lectura y esta escritura.
             return await RejectedAsync(transaction, ResultadoEscrituraAlta.CorreoDuplicado, cancellationToken);
