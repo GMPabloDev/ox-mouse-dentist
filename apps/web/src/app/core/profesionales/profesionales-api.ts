@@ -6,6 +6,21 @@ import type {
 } from '@mousedent/api-client';
 
 /**
+ * Códigos estables que la API publica en la extensión `code` de sus
+ * `ProblemDetails`. La web clasifica por ellos y usa el título solo como respaldo,
+ * así que reescribir un mensaje no cambia la forma de corregir el formulario.
+ */
+export const PROFESIONAL_ERROR_CODES = {
+  colegiaturaDuplicada: 'colegiatura_duplicada',
+  correoConFicha: 'correo_con_ficha',
+  correoDeOtraCuenta: 'correo_de_otra_cuenta',
+  activacionIncompleta: 'activacion_incompleta',
+  altaSimultanea: 'alta_simultanea',
+  cuentaNoEncontrada: 'cuenta_no_encontrada',
+  invitacionSinEnviar: 'invitacion_sin_enviar',
+} as const;
+
+/**
  * Motivo por el que una operación de profesionales no se completó. Los rechazos
  * que comparten el estado 409 se separan porque el formulario corrige un campo
  * distinto en cada caso.

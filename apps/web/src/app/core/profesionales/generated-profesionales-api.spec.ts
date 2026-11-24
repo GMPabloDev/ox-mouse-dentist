@@ -1,5 +1,6 @@
 import type { ProfesionalResponse } from '@mousedent/api-client';
 import { GeneratedProfesionalesApi, classify } from './generated-profesionales-api';
+import { PROFESIONAL_ERROR_CODES } from './profesionales-api';
 
 const sdk = vi.hoisted(() => ({
   listProfesionales: vi.fn(),
@@ -46,25 +47,54 @@ describe('respuestas de la API de profesionales', () => {
     });
   });
 
-  it('separa los conflictos que corrigen un campo distinto', () => {
+  it('clasifica los conflictos por el código estable de la API', () => {
     expect(
       classify(409, {
+        code: PROFESIONAL_ERROR_CODES.colegiaturaDuplicada,
         title: 'Colegiatura duplicada',
         detail: 'Otra ficha ya tiene ese número.',
       }),
     ).toEqual({ kind: 'duplicate-colegiatura', detail: 'Otra ficha ya tiene ese número.' });
 
     expect(
-      classify(409, { title: 'Correo con ficha', detail: 'Ese correo ya tiene una ficha.' }),
+      classify(409, {
+        code: PROFESIONAL_ERROR_CODES.correoConFicha,
+        title: 'Correo con ficha',
+        detail: 'Ese correo ya tiene una ficha.',
+      }),
     ).toEqual({ kind: 'email-taken', detail: 'Ese correo ya tiene una ficha.' });
 
     expect(
-      classify(409, { title: 'Correo de otra cuenta', detail: 'Es una cuenta de recepción.' }),
+      classify(409, {
+        code: PROFESIONAL_ERROR_CODES.correoDeOtraCuenta,
+        title: 'Correo de otra cuenta',
+        detail: 'Es una cuenta de recepción.',
+      }),
     ).toEqual({ kind: 'other-profile', detail: 'Es una cuenta de recepción.' });
 
     expect(
-      classify(409, { title: 'Activación incompleta', detail: 'Falta un local activo.' }),
+      classify(409, {
+        code: PROFESIONAL_ERROR_CODES.activacionIncompleta,
+        title: 'Activación incompleta',
+        detail: 'Falta un local activo.',
+      }),
     ).toEqual({ kind: 'activation-incomplete', detail: 'Falta un local activo.' });
+
+    expect(
+      classify(409, {
+        code: PROFESIONAL_ERROR_CODES.altaSimultanea,
+        title: 'Alta simultánea',
+        detail: 'Otra solicitud registró ese correo.',
+      }),
+    ).toEqual({ kind: 'conflict', detail: 'Otra solicitud registró ese correo.' });
+
+    expect(
+      classify(409, {
+        code: PROFESIONAL_ERROR_CODES.cuentaNoEncontrada,
+        title: 'Cuenta no encontrada',
+        detail: 'La cuenta dejó de existir.',
+      }),
+    ).toEqual({ kind: 'conflict', detail: 'La cuenta dejó de existir.' });
 
     expect(
       classify(409, { title: 'Cuenta inactiva', detail: 'Reactiva la cuenta en personal.' }),
@@ -72,6 +102,49 @@ describe('respuestas de la API de profesionales', () => {
 
     expect(classify(409, { title: 'Contraseña ya establecida' })).toEqual({
       kind: 'conflict',
+      detail: undefined,
+    });
+  });
+
+  it('prefiere el código al título y conserva el título como respaldo', () => {
+    // Un título reescrito no cambia la clasificación mientras el código siga ahí.
+    expect(
+      classify(409, {
+        code: PROFESIONAL_ERROR_CODES.correoConFicha,
+        title: 'Colegiatura duplicada',
+        detail: 'Ese correo ya tiene una ficha.',
+      }),
+    ).toEqual({ kind: 'email-taken', detail: 'Ese correo ya tiene una ficha.' });
+
+    // Sin código, la respuesta antigua se sigue clasificando por el título.
+    expect(
+      classify(409, {
+        title: 'Activación incompleta',
+        detail: 'Falta un local activo.',
+      }),
+    ).toEqual({ kind: 'activation-incomplete', detail: 'Falta un local activo.' });
+
+    // El código del 502 identifica la invitación sin enviar aunque falte el estado.
+    expect(
+      classify(undefined, {
+        code: PROFESIONAL_ERROR_CODES.invitacionSinEnviar,
+        profesionalId: PROFESIONAL.id,
+      }),
+    ).toEqual({
+      kind: 'invitation-failed',
+      profesionalId: PROFESIONAL.id,
+      detail: undefined,
+    });
+
+    // Sin código, el estado 502 sigue siendo el respaldo de una respuesta antigua.
+    expect(
+      classify(502, {
+        title: 'Invitación sin enviar',
+        profesionalId: PROFESIONAL.id,
+      }),
+    ).toEqual({
+      kind: 'invitation-failed',
+      profesionalId: PROFESIONAL.id,
       detail: undefined,
     });
   });
@@ -132,7 +205,11 @@ describe('respuestas de la API de profesionales', () => {
     expect(sdk.createProfesional).toHaveBeenCalledWith({ body: form });
 
     sdk.createProfesional.mockResolvedValueOnce({
-      error: { title: 'Invitación sin enviar', profesionalId: PROFESIONAL.id },
+      error: {
+        code: PROFESIONAL_ERROR_CODES.invitacionSinEnviar,
+        title: 'Invitación sin enviar',
+        profesionalId: PROFESIONAL.id,
+      },
       response: response(502),
     });
     const failure = await api.create(form);

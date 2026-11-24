@@ -9,8 +9,13 @@ import {
   type ProfesionalResponse,
   type UpdateProfesionalForm,
 } from '@mousedent/api-client';
-import { problemDetail, problemTitle, validationErrors } from '../api/problem-details';
-import type { ProfesionalFailure, ProfesionalResult, ProfesionalesApi } from './profesionales-api';
+import { problemCode, problemDetail, problemTitle, validationErrors } from '../api/problem-details';
+import {
+  PROFESIONAL_ERROR_CODES,
+  type ProfesionalFailure,
+  type ProfesionalResult,
+  type ProfesionalesApi,
+} from './profesionales-api';
 
 /**
  * Adaptador del cliente OpenAPI generado. Traduce cada respuesta a un resultado
@@ -71,6 +76,16 @@ export class GeneratedProfesionalesApi implements ProfesionalesApi {
 
 /** Traduce el estado HTTP y el cuerpo de error a un motivo que la web explique. */
 export function classify(status: number | undefined, error: unknown): ProfesionalFailure {
+  // El código estable manda sobre el estado. El 502 queda como respaldo para una
+  // respuesta antigua: en esta API solo significa que la invitación no salió.
+  if (problemCode(error) === PROFESIONAL_ERROR_CODES.invitacionSinEnviar) {
+    return {
+      kind: 'invitation-failed',
+      profesionalId: profesionalId(error),
+      detail: problemDetail(error),
+    };
+  }
+
   switch (status) {
     case 400:
       return { kind: 'validation', errors: validationErrors(error) };
@@ -94,12 +109,26 @@ export function classify(status: number | undefined, error: unknown): Profesiona
 }
 
 /**
- * El estado 409 cubre varios conflictos. La API todavía no publica un código
- * estable, así que se usa el título del `ProblemDetails` para saber qué campo
- * corregir; los conflictos sin campo propio conservan el detalle del servidor.
+ * El estado 409 cubre varios conflictos. La API publica un código estable en la
+ * extensión `code`; el título queda como respaldo para una respuesta antigua o sin
+ * código. Los conflictos sin campo propio conservan el detalle del servidor.
  */
 function classifyConflict(error: unknown): ProfesionalFailure {
   const detail = problemDetail(error);
+
+  switch (problemCode(error)) {
+    case PROFESIONAL_ERROR_CODES.colegiaturaDuplicada:
+      return { kind: 'duplicate-colegiatura', detail };
+    case PROFESIONAL_ERROR_CODES.correoConFicha:
+      return { kind: 'email-taken', detail };
+    case PROFESIONAL_ERROR_CODES.correoDeOtraCuenta:
+      return { kind: 'other-profile', detail };
+    case PROFESIONAL_ERROR_CODES.activacionIncompleta:
+      return { kind: 'activation-incomplete', detail };
+    case PROFESIONAL_ERROR_CODES.altaSimultanea:
+    case PROFESIONAL_ERROR_CODES.cuentaNoEncontrada:
+      return { kind: 'conflict', detail };
+  }
 
   switch (problemTitle(error)) {
     case 'Colegiatura duplicada':

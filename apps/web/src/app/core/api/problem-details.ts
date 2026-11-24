@@ -1,4 +1,4 @@
-import type { HttpValidationProblemDetails, ProblemDetails } from '@mousedent/api-client';
+import type { HttpValidationProblemDetails } from '@mousedent/api-client';
 
 /**
  * Lectura de las respuestas de error de la API. El cuerpo siempre es
@@ -12,11 +12,19 @@ export function problemDetail(error: unknown): string | undefined {
 }
 
 /**
- * Título del `ProblemDetails`. La API no publica códigos de error estables, así
- * que el título es lo único que distingue dos conflictos con el mismo estado.
+ * Título del `ProblemDetails`. Es el texto visible; solo se usa como respaldo
+ * cuando la respuesta no trae un código estable.
  */
 export function problemTitle(error: unknown): string | undefined {
   return textField(error, 'title');
+}
+
+/**
+ * Código estable de la extensión `code` del `ProblemDetails`. Los errores de
+ * profesionales lo publican para clasificar sin depender del título en español.
+ */
+export function problemCode(error: unknown): string | undefined {
+  return textField(error, 'code');
 }
 
 /** Errores por campo de un `ValidationProblemDetails`, sin perder los mensajes. */
@@ -38,11 +46,11 @@ export function validationErrors(error: unknown): Readonly<Record<string, readon
   );
 }
 
-function textField(error: unknown, field: 'detail' | 'title'): string | undefined {
+function textField(error: unknown, field: 'detail' | 'title' | 'code'): string | undefined {
   if (typeof error !== 'object' || error === null) {
     return undefined;
   }
 
-  const value = (error as ProblemDetails)[field];
+  const value = (error as Record<string, unknown>)[field];
   return typeof value === 'string' && value.trim() ? value : undefined;
 }
