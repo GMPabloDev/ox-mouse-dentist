@@ -1,6 +1,6 @@
 # SPEC 04 — Profesionales, especialidades y locales de atención
 
-> **Status:** Aprobado
+> **Status:** Implementada
 > **Depends on:** SPEC 01, SPEC 02, SPEC 03
 > **Date:** 2026-11-22
 > **Objective:** Permitir que administración gestione la ficha del profesional, su cuenta de
@@ -247,38 +247,38 @@ regla `/prototypes/`, así que esta referencia es local y no se recupera desde e
 
 ## Criterios de aceptación
 
-- [ ] Administración autenticada puede listar, buscar, crear, editar, desactivar y reactivar
+- [x] Administración autenticada puede listar, buscar, crear, editar, desactivar y reactivar
       profesionales. Los datos persisten tras recargar.
-- [ ] Toda ficha tiene una cuenta de perfil `Profesional` y toda cuenta tiene como máximo una ficha.
+- [x] Toda ficha tiene una cuenta de perfil `Profesional` y toda cuenta tiene como máximo una ficha.
       La API impide ambos incumplimientos.
-- [ ] El alta crea la cuenta pendiente y envía la invitación con el flujo de SPEC 02. Si el envío
+- [x] El alta crea la cuenta pendiente y envía la invitación con el flujo de SPEC 02. Si el envío
       falla, la ficha queda creada, la interfaz informa el fallo, la lista conserva la marca de
       correo fallido y el reenvío funciona.
-- [ ] Un alta con un correo de una cuenta `Profesional` sin ficha vincula esa cuenta. Un correo de
+- [x] Un alta con un correo de una cuenta `Profesional` sin ficha vincula esa cuenta. Un correo de
       otro perfil o de una cuenta con ficha se rechaza sin datos parciales.
-- [ ] El módulo de personal no ofrece el perfil `Profesional`, y la API rechaza crearlo, asignarlo o
+- [x] El módulo de personal no ofrece el perfil `Profesional`, y la API rechaza crearlo, asignarlo o
       retirarlo de una cuenta con ficha.
-- [ ] La ficha no duplica nombre, correo ni teléfono. Esos datos se editan en personal y la ficha
+- [x] La ficha no duplica nombre, correo ni teléfono. Esos datos se editan en personal y la ficha
       los muestra actualizados.
-- [ ] El número de colegiatura es opcional, admite 1 a 30 caracteres tras quitar espacios y es
+- [x] El número de colegiatura es opcional, admite 1 a 30 caracteres tras quitar espacios y es
       único entre todas las fichas, incluso inactivas y con diferencias de mayúsculas o espacios.
-- [ ] Se pueden registrar dos profesionales con el mismo nombre y la interfaz advierte posibles
+- [x] Se pueden registrar dos profesionales con el mismo nombre y la interfaz advierte posibles
       homónimos sin bloquear.
-- [ ] Crear, editar una ficha activa o reactivar exige al menos una especialidad activa y al
+- [x] Crear, editar una ficha activa o reactivar exige al menos una especialidad activa y al
       menos un local activo. Especialidades y locales inactivos solo pueden conservarse, no
       añadirse.
-- [ ] Una especialidad desactivada en el catálogo permanece asignada y visible como inactiva. Un
+- [x] Una especialidad desactivada en el catálogo permanece asignada y visible como inactiva. Un
       profesional que se queda sin especialidad activa no se puede reactivar.
-- [ ] Un profesional inactivo opera en ningún local; al reactivarlo recupera sus especialidades y
+- [x] Un profesional inactivo opera en ningún local; al reactivarlo recupera sus especialidades y
       locales. La cuenta y la ficha cambian de estado de forma independiente.
-- [ ] La comprobación de acceso vigente permite operar al profesional solo en locales activos
+- [x] La comprobación de acceso vigente permite operar al profesional solo en locales activos
       asignados, con cuenta activa y ficha activa. Los cambios se aplican en la siguiente solicitud.
-- [ ] Recepción y profesionales no acceden a la lista ni a la ficha, por la web ni por la API.
-- [ ] La lista distingue carga, vacío, sin resultados y error, busca por nombre o correo y filtra por
+- [x] Recepción y profesionales no acceden a la lista ni a la ficha, por la web ni por la API.
+- [x] La lista distingue carga, vacío, sin resultados y error, busca por nombre o correo y filtra por
       especialidad, local y estado.
-- [ ] Las operaciones simultáneas no crean fichas duplicadas ni números de colegiatura repetidos.
+- [x] Las operaciones simultáneas no crean fichas duplicadas ni números de colegiatura repetidos.
 - [x] La variante de prototipo se elige y se registra en esta spec antes de implementar la interfaz.
-- [ ] El OpenAPI y el cliente generado están actualizados. `npm test` y `npm run build` terminan
+- [x] El OpenAPI y el cliente generado están actualizados. `npm test` y `npm run build` terminan
       correctamente.
 
 ## Decisiones
