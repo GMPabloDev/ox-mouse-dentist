@@ -9,8 +9,8 @@ import { BrandMark } from '../../core/brand/brand-mark';
 
 /**
  * Contenedor del panel. Administración ve los destinos que ya tienen pantalla:
- * locales, personal y catálogo. Recepción y profesionales solo ven el catálogo,
- * el módulo al que pueden acceder.
+ * locales, personal, profesionales y catálogo. Recepción y profesionales solo
+ * ven el catálogo, el módulo al que pueden acceder.
  */
 @Component({
   selector: 'app-panel-layout',
@@ -70,7 +70,9 @@ function currentSection(url: string): string {
     ? 'Catálogo'
     : url.startsWith('/personal')
       ? 'Personal'
-      : 'Locales';
+      : url.startsWith('/profesionales')
+        ? 'Profesionales'
+        : 'Locales';
 }
 
 function initialsOf(user: SessionUser | null): string {

@@ -35,7 +35,8 @@ import {
           aria-modal="true"
           [attr.aria-labelledby]="labelledBy()"
           tabindex="-1"
-          class="flex h-dvh w-full flex-col overflow-hidden bg-card shadow-xl outline-none sm:max-w-[530px]"
+          class="flex h-dvh w-full flex-col overflow-hidden bg-card shadow-xl outline-none"
+          [class]="wide() ? 'sm:max-w-[660px]' : 'sm:max-w-[530px]'"
           (click)="$event.stopPropagation()"
         >
           <ng-content />
@@ -47,6 +48,8 @@ import {
 export class StaffDrawer {
   readonly open = input(false);
   readonly labelledBy = input.required<string>();
+  /** Panel ancho de la referencia de profesionales: 660 px en escritorio. */
+  readonly wide = input(false);
   /** Una confirmación abierta sobre el panel lo deja fuera del foco. */
   readonly blocked = input(false);
   readonly closed = output<void>();

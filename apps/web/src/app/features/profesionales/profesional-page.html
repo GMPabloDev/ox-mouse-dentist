@@ -1,0 +1,763 @@
+<section class="w-full">
+  <div class="mb-[26px] flex flex-wrap items-start justify-between gap-5">
+    <div class="min-w-0">
+      <p class="text-[11px] font-extrabold tracking-[1.6px] text-primary uppercase">
+        Equipo clínico
+      </p>
+      <h1
+        class="mt-[7px] mb-2.5 font-display text-[27px] leading-[1.15] font-extrabold tracking-[-0.6px] text-foreground sm:text-[34px] sm:tracking-[-1px]"
+      >
+        Profesionales
+      </h1>
+      <p class="text-[13px] text-muted-foreground sm:text-sm">
+        Gestiona especialidades, locales de atención y el estado de cada ficha.
+      </p>
+    </div>
+    @if (state() === 'ready') {
+      <button hlmBtn type="button" (click)="openCreate()">
+        <app-staff-icon name="plus" class="size-4" />
+        Nuevo profesional
+      </button>
+    }
+  </div>
+
+  @if (notice(); as message) {
+    <hlm-alert class="mb-5" role="status" variant="success">
+      <p class="flex items-center gap-2 font-semibold">{{ message }}</p>
+    </hlm-alert>
+  }
+
+  @switch (state()) {
+    @case ('loading') {
+      <div class="rounded-[14px] border border-border bg-card" role="status" aria-busy="true">
+        <span class="sr-only">Cargando profesionales</span>
+        <div class="border-b border-border px-5 py-4">
+          <div
+            class="h-11 w-full max-w-[320px] animate-pulse rounded-lg bg-surface-green-deep"
+          ></div>
+        </div>
+        @for (row of [1, 2, 3, 4]; track row) {
+          <div class="flex items-center gap-4 border-t border-border px-5 py-5 first:border-t-0">
+            <div class="size-9 shrink-0 animate-pulse rounded-full bg-surface-green-deep"></div>
+            <div class="min-w-0 flex-1 space-y-2">
+              <div class="h-3.5 w-2/5 animate-pulse rounded bg-surface-green-deep"></div>
+              <div class="h-3 w-3/5 animate-pulse rounded bg-surface-green-deep"></div>
+            </div>
+            <div class="h-5 w-20 shrink-0 animate-pulse rounded bg-surface-green-deep"></div>
+          </div>
+        }
+        <div class="border-t border-border px-5 py-4">
+          <p class="text-[13px] font-semibold">Cargando profesionales</p>
+          <p class="text-xs text-muted-foreground">
+            Estamos consultando las fichas y sus asignaciones.
+          </p>
+        </div>
+      </div>
+    }
+
+    @case ('error') {
+      <div class="rounded-[14px] border border-border bg-card px-6 py-12 text-center">
+        <div class="mx-auto grid size-14 place-items-center rounded-2xl bg-secondary text-primary">
+          <app-staff-icon name="alert" class="size-7" />
+        </div>
+        <h2 class="mt-4 font-display text-[21px] font-extrabold tracking-tight text-foreground">
+          No pudimos cargar los profesionales
+        </h2>
+        <p class="mx-auto mt-2 max-w-md text-[13px] text-muted-foreground">{{ loadError() }}</p>
+        <button hlmBtn class="mt-5" type="button" (click)="load()">
+          <app-staff-icon name="refresh" class="size-4" />
+          Reintentar
+        </button>
+      </div>
+    }
+
+    @case ('ended') {
+      <div class="rounded-[14px] border border-border bg-card px-6 py-12 text-center">
+        <div class="mx-auto grid size-14 place-items-center rounded-2xl bg-secondary text-primary">
+          <app-staff-icon name="lock" class="size-7" />
+        </div>
+        <h2 class="mt-4 font-display text-[21px] font-extrabold tracking-tight text-foreground">
+          {{ endedTitle() }}
+        </h2>
+        <p class="mx-auto mt-2 max-w-md text-[13px] text-muted-foreground">
+          {{ endedMessage() }}
+        </p>
+        @if (endedReason() === 'profile') {
+          <a hlmBtn class="mt-5" routerLink="/bienvenida">Ir a mi bienvenida</a>
+        } @else {
+          <a hlmBtn class="mt-5" routerLink="/acceso">Volver al acceso</a>
+        }
+      </div>
+    }
+
+    @default {
+      @if (professionals().length === 0) {
+        <div class="rounded-[14px] border border-border bg-card px-6 py-12 text-center">
+          <div
+            class="mx-auto grid size-14 place-items-center rounded-2xl bg-secondary text-primary"
+          >
+            <app-staff-icon name="users" class="size-7" />
+          </div>
+          <h2 class="mt-4 font-display text-[21px] font-extrabold tracking-tight">
+            Aún no hay profesionales
+          </h2>
+          <p class="mx-auto mt-2 max-w-[390px] text-[13px] text-muted-foreground">
+            Registra al primer profesional para asignarle especialidades y locales de atención.
+          </p>
+          <button hlmBtn class="mt-5" type="button" (click)="openCreate()">
+            <app-staff-icon name="plus" class="size-4" />
+            Registrar profesional
+          </button>
+        </div>
+      } @else {
+        <div class="mb-4 flex flex-wrap items-center gap-x-5 gap-y-2 border-b border-border pb-4">
+          <p class="flex items-center gap-2 text-[13px] text-muted-foreground">
+            <strong class="font-display text-[21px] text-foreground">{{ counts().total }}</strong>
+            {{ counts().total === 1 ? 'profesional' : 'profesionales' }}
+          </p>
+          <p class="flex items-center gap-2 text-[13px] text-muted-foreground">
+            <span class="size-[7px] rounded-full bg-primary" aria-hidden="true"></span>
+            <strong class="font-display text-[21px] text-foreground">{{
+              counts().activeFichas
+            }}</strong>
+            fichas activas
+          </p>
+          <p class="flex items-center gap-2 text-[13px] text-muted-foreground">
+            <span class="size-[7px] rounded-full bg-muted-foreground" aria-hidden="true"></span>
+            <strong class="font-display text-[21px] text-foreground">{{
+              counts().inactiveFichas
+            }}</strong>
+            fichas inactivas
+          </p>
+          <p class="flex items-center gap-2 text-[13px] text-muted-foreground">
+            <span class="size-[7px] rounded-full bg-warning-foreground" aria-hidden="true"></span>
+            <strong class="font-display text-[21px] text-foreground">{{
+              counts().pendingAccounts
+            }}</strong>
+            cuentas pendientes
+          </p>
+          @if (counts().failedInvitations > 0) {
+            <p
+              class="flex items-center gap-1.5 rounded-[7px] bg-brand-coral-soft px-2 py-1 text-[11px] font-extrabold text-destructive"
+              role="status"
+            >
+              <app-staff-icon name="alert" class="size-3.5" />
+              {{ counts().failedInvitations }}
+              {{ counts().failedInvitations === 1 ? 'correo sin enviar' : 'correos sin enviar' }}
+            </p>
+          }
+          <p class="ml-auto hidden items-center gap-1.5 text-xs text-muted-foreground lg:flex">
+            <app-staff-icon name="info" class="size-4" />
+            La ficha y la cuenta cambian de estado por separado.
+          </p>
+        </div>
+
+        <div class="overflow-hidden rounded-[14px] border border-border bg-card">
+          <div
+            class="flex flex-wrap items-center gap-2.5 border-b border-border px-4 py-3.5 sm:px-5"
+          >
+            <label class="relative w-full sm:min-w-[190px] sm:max-w-[280px] sm:flex-[1_1_220px]">
+              <span class="sr-only">Buscar por nombre o correo</span>
+              <app-staff-icon
+                name="search"
+                class="pointer-events-none absolute top-1/2 left-3 size-[18px] -translate-y-1/2 text-muted-foreground"
+              />
+              <input
+                hlmInput
+                style="padding-left: 2.5rem"
+                type="search"
+                autocomplete="off"
+                placeholder="Buscar por nombre o correo"
+                aria-label="Buscar por nombre o correo"
+                [value]="search()"
+                (input)="setSearch($event)"
+              />
+            </label>
+
+            <label class="min-w-0">
+              <span class="sr-only">Filtrar por especialidad</span>
+              <select
+                id="profesional-specialty-filter"
+                class="h-11 max-w-[210px] min-w-0 rounded-[9px] border border-input bg-card px-2.5 text-[12px]"
+                [value]="especialidadFilter()"
+                (change)="setEspecialidadFilter($event)"
+              >
+                <option value="">Todas las especialidades</option>
+                @for (especialidad of especialidades(); track especialidad.id) {
+                  <option [value]="especialidad.id">
+                    {{ especialidad.name }}{{ especialidad.isActive ? '' : ' · Inactiva' }}
+                  </option>
+                }
+              </select>
+            </label>
+
+            <label class="min-w-0">
+              <span class="sr-only">Filtrar por local</span>
+              <select
+                id="profesional-local-filter"
+                class="h-11 max-w-[210px] min-w-0 rounded-[9px] border border-input bg-card px-2.5 text-[12px]"
+                [value]="localFilter()"
+                (change)="setLocalFilter($event)"
+              >
+                <option value="">Todos los locales</option>
+                @for (local of locales(); track local.id) {
+                  <option [value]="local.id">
+                    {{ local.name }}{{ local.isActive ? '' : ' · Inactivo' }}
+                  </option>
+                }
+              </select>
+            </label>
+
+            <label class="min-w-0">
+              <span class="sr-only">Filtrar por estado de la ficha</span>
+              <select
+                id="profesional-ficha-filter"
+                class="h-11 max-w-[210px] min-w-0 rounded-[9px] border border-input bg-card px-2.5 text-[12px]"
+                [value]="fichaFilter()"
+                (change)="setFichaFilter($event)"
+              >
+                <option value="all">Todas las fichas</option>
+                <option value="active">Ficha activa</option>
+                <option value="inactive">Ficha inactiva</option>
+              </select>
+            </label>
+
+            <label class="min-w-0">
+              <span class="sr-only">Filtrar por estado de la cuenta</span>
+              <select
+                id="profesional-account-filter"
+                class="h-11 max-w-[210px] min-w-0 rounded-[9px] border border-input bg-card px-2.5 text-[12px]"
+                [value]="accountFilter()"
+                (change)="setAccountFilter($event)"
+              >
+                <option value="all">Todas las cuentas</option>
+                <option value="Pendiente">Cuenta pendiente</option>
+                <option value="Activa">Cuenta activa</option>
+                <option value="Inactiva">Cuenta inactiva</option>
+              </select>
+            </label>
+
+            <button
+              class="ml-auto min-h-9 rounded-lg px-1 text-[13px] font-bold text-primary transition-colors hover:bg-secondary focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+              type="button"
+              [hidden]="!hasActiveFilters()"
+              (click)="clearFilters()"
+            >
+              Limpiar filtros
+            </button>
+          </div>
+
+          <div
+            class="flex items-center justify-between gap-3 border-b border-border bg-surface-green px-4 py-2.5 text-[11px] text-muted-foreground sm:px-5"
+          >
+            <span class="font-bold text-foreground">{{ resultLabel() }}</span>
+            <span>Ordenados por nombre</span>
+          </div>
+
+          @if (visible().length === 0) {
+            <div class="px-6 py-12 text-center">
+              <div
+                class="mx-auto grid size-14 place-items-center rounded-2xl bg-secondary text-primary"
+              >
+                <app-staff-icon name="search" class="size-7" />
+              </div>
+              <h2 class="mt-4 font-display text-[21px] font-extrabold tracking-tight">
+                No encontramos profesionales
+              </h2>
+              <p class="mx-auto mt-2 max-w-[390px] text-[13px] text-muted-foreground">
+                Prueba con otro nombre, correo o filtro. Los filtros activos se pueden limpiar.
+              </p>
+              <button hlmBtn class="mt-5" variant="outline" type="button" (click)="clearFilters()">
+                Limpiar filtros
+              </button>
+            </div>
+          } @else {
+            <table class="w-full table-fixed border-collapse text-left max-[1161px]:block">
+              <caption class="sr-only">
+                Profesionales, especialidades, locales de atención y estados de la ficha y de la
+                cuenta
+              </caption>
+              <colgroup class="max-[1161px]:hidden">
+                <col class="w-[27%]" />
+                <col class="w-[24%]" />
+                <col class="w-[20%]" />
+                <col class="w-[11%]" />
+                <col class="w-[14%]" />
+                <col class="w-[4%]" />
+              </colgroup>
+              <thead
+                class="hidden border-b border-border bg-surface-green text-[10px] font-extrabold tracking-[1px] text-muted-foreground uppercase min-[1161px]:table-header-group"
+              >
+                <tr>
+                  <th class="px-5 py-3 font-extrabold" scope="col">Profesional</th>
+                  <th class="px-3 py-3 font-extrabold" scope="col">Especialidades</th>
+                  <th class="px-3 py-3 font-extrabold" scope="col">Locales</th>
+                  <th class="px-3 py-3 font-extrabold" scope="col">Ficha</th>
+                  <th class="px-3 py-3 font-extrabold" scope="col">Cuenta</th>
+                  <th class="px-3 py-3" scope="col"><span class="sr-only">Acciones</span></th>
+                </tr>
+              </thead>
+              <tbody class="max-[1161px]:grid max-[1161px]:gap-2.5 max-[1161px]:p-2.5">
+                @for (profesional of visible(); track profesional.id) {
+                  <tr
+                    class="border-t border-border align-middle max-[1161px]:grid max-[1161px]:grid-cols-2 max-[1161px]:gap-x-3.5 max-[1161px]:gap-y-2 max-[1161px]:rounded-xl max-[1161px]:border max-[1161px]:border-border-soft max-[1161px]:p-3"
+                  >
+                    <td
+                      class="px-4 py-3.5 max-[1161px]:col-span-2 max-[1161px]:block max-[1161px]:border-b max-[1161px]:border-border-soft max-[1161px]:px-0 max-[1161px]:py-0 max-[1161px]:pb-2.5 sm:px-5"
+                    >
+                      <div class="flex items-start gap-2.5">
+                        <hlm-avatar
+                          class="size-9 bg-accent text-accent-foreground"
+                          aria-hidden="true"
+                        >
+                          <span hlmAvatarFallback class="text-[11px] font-extrabold">{{
+                            initials(profesional)
+                          }}</span>
+                        </hlm-avatar>
+                        <div class="min-w-0">
+                          <button
+                            class="w-fit max-w-full rounded text-left text-[15px] leading-tight font-extrabold tracking-[-0.2px] transition-colors [overflow-wrap:anywhere] hover:text-primary hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                            type="button"
+                            (click)="openDetail(profesional.id)"
+                          >
+                            {{ profesional.displayName }}
+                          </button>
+                          <p
+                            class="mt-0.5 text-[11px] text-muted-foreground [overflow-wrap:anywhere]"
+                          >
+                            {{ profesional.email }}
+                          </p>
+                          <p class="mt-0.5 text-[11px] text-muted-foreground">
+                            {{ colegiatura(profesional) }}
+                          </p>
+                        </div>
+                      </div>
+                    </td>
+
+                    <td class="px-3 py-3.5 max-[1161px]:block max-[1161px]:px-0 max-[1161px]:py-0">
+                      <span
+                        class="mb-1 hidden text-[10px] font-extrabold tracking-[0.09em] text-muted-foreground uppercase max-[1161px]:block"
+                      >
+                        Especialidades
+                      </span>
+                      <app-profesional-chips
+                        kind="especialidad"
+                        [items]="profesional.especialidades"
+                      />
+                    </td>
+
+                    <td class="px-3 py-3.5 max-[1161px]:block max-[1161px]:px-0 max-[1161px]:py-0">
+                      <span
+                        class="mb-1 hidden text-[10px] font-extrabold tracking-[0.09em] text-muted-foreground uppercase max-[1161px]:block"
+                      >
+                        Locales de atención
+                      </span>
+                      <app-profesional-chips kind="local" [items]="profesional.locales" />
+                    </td>
+
+                    <td
+                      class="px-3 py-3.5 max-[1161px]:block max-[1161px]:self-start max-[1161px]:px-0 max-[1161px]:py-0"
+                    >
+                      <app-profesional-ficha-status [active]="profesional.isActive" />
+                    </td>
+
+                    <td
+                      class="px-3 py-3.5 max-[1161px]:block max-[1161px]:self-start max-[1161px]:px-0 max-[1161px]:py-0"
+                    >
+                      <app-profesional-account-status
+                        [status]="profesional.accountStatus"
+                        [invitationFailed]="profesional.invitationFailed"
+                      />
+                    </td>
+
+                    <td
+                      class="px-3 py-3.5 text-right max-[1161px]:col-span-2 max-[1161px]:block max-[1161px]:border-t max-[1161px]:border-border-soft max-[1161px]:px-0 max-[1161px]:pt-2 max-[1161px]:pb-0"
+                    >
+                      <button
+                        class="inline-flex items-center gap-1 rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none max-[1161px]:text-primary"
+                        type="button"
+                        [attr.aria-label]="'Ver ficha de ' + profesional.displayName"
+                        (click)="openDetail(profesional.id)"
+                      >
+                        <span class="hidden text-[11px] font-bold max-[1161px]:inline">
+                          Ver ficha
+                        </span>
+                        <app-staff-icon name="chevron" class="size-4" />
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          }
+
+          <div
+            class="flex flex-wrap items-center justify-between gap-2 border-t border-border bg-surface-green px-4 py-2.5 text-[11px] text-muted-foreground sm:px-5"
+          >
+            <span>{{ resultLabel() }}</span>
+            <span class="hidden items-center gap-1.5 sm:flex">
+              <app-staff-icon name="shield" class="size-3.5" />
+              Solo administración puede gestionar profesionales.
+            </span>
+          </div>
+        </div>
+
+        <p class="mt-4 flex items-start gap-2 text-[11px] text-muted-foreground">
+          <app-staff-icon name="info" class="mt-px size-3.5" />
+          Los profesionales no se eliminan. Desactiva la ficha para retirarla de la agenda y
+          conserva sus asignaciones y su cuenta.
+        </p>
+      }
+    }
+  }
+</section>
+
+<app-staff-drawer
+  [open]="panel() !== null"
+  [labelledBy]="panelLabelId()"
+  [blocked]="confirmation() !== null"
+  [wide]="true"
+  (closed)="requestClosePanel()"
+>
+  @if (selected(); as profesional) {
+    <div class="flex flex-wrap items-start gap-3 border-b border-border px-5 py-4 sm:px-6">
+      <hlm-avatar class="size-12 bg-accent text-accent-foreground" aria-hidden="true">
+        <span hlmAvatarFallback class="text-[15px] font-extrabold">{{
+          initials(profesional)
+        }}</span>
+      </hlm-avatar>
+      <div class="min-w-[210px] flex-1">
+        <p class="text-[11px] font-extrabold tracking-[1.6px] text-primary uppercase">
+          Ficha del profesional
+        </p>
+        <h2
+          id="profesional-detail-title"
+          class="mt-1 font-display text-[21px] leading-tight font-extrabold tracking-[-0.4px] text-foreground [overflow-wrap:anywhere]"
+        >
+          {{ profesional.displayName }}
+        </h2>
+        <div class="mt-2 flex flex-wrap items-center gap-1.5">
+          <app-profesional-ficha-status [active]="profesional.isActive" />
+          <app-profesional-account-status
+            [status]="profesional.accountStatus"
+            [invitationFailed]="profesional.invitationFailed"
+          />
+        </div>
+        <p class="mt-2 text-[12px] text-muted-foreground [overflow-wrap:anywhere]">
+          {{ colegiatura(profesional) }} <span aria-hidden="true">·</span> {{ profesional.email }}
+        </p>
+      </div>
+      <div class="ml-auto flex items-center gap-1">
+        <button
+          hlmBtn
+          variant="outline"
+          size="xs"
+          type="button"
+          (click)="openEdit(profesional, true)"
+        >
+          <app-staff-icon name="edit" class="size-3.5" />
+          Editar ficha
+        </button>
+        <button
+          class="-mr-1 rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+          type="button"
+          aria-label="Cerrar ficha"
+          (click)="requestClosePanel()"
+        >
+          <app-staff-icon name="close" class="size-5" />
+        </button>
+      </div>
+    </div>
+
+    <div class="min-h-0 flex-1 overflow-y-auto">
+      @if (actionError(); as message) {
+        <div class="px-5 pt-4 sm:px-6">
+          <app-staff-notice tone="error" title="La operación no se completó">
+            {{ message }}
+          </app-staff-notice>
+        </div>
+      }
+
+      @if (profesional.accountStatus === 'Pendiente') {
+        <div
+          class="border-b px-5 py-3 sm:px-6"
+          [class]="
+            profesional.invitationFailed
+              ? 'border-destructive/30 bg-brand-coral-soft/70 text-destructive'
+              : 'border-warning bg-warning/30 text-warning-foreground'
+          "
+        >
+          <div class="flex flex-wrap items-start gap-2.5">
+            <app-staff-icon
+              [name]="profesional.invitationFailed ? 'alert' : 'mail'"
+              class="mt-0.5 size-[18px] shrink-0"
+            />
+            <div class="min-w-0 flex-1">
+              <strong class="block text-[13px] font-extrabold">
+                {{
+                  profesional.invitationFailed
+                    ? 'No pudimos enviar la invitación'
+                    : 'Invitación pendiente'
+                }}
+              </strong>
+              <p class="mt-0.5 text-xs leading-relaxed">
+                {{ invitationCopy(profesional) }}
+              </p>
+            </div>
+            <button
+              hlmBtn
+              variant="outline"
+              size="xs"
+              type="button"
+              [disabled]="busyId() === profesional.id"
+              (click)="requestResend(profesional)"
+            >
+              {{
+                busyId() === profesional.id
+                  ? 'Enviando…'
+                  : profesional.invitationFailed
+                    ? 'Reintentar envío'
+                    : 'Reenviar invitación'
+              }}
+            </button>
+          </div>
+        </div>
+      }
+
+      <div class="grid gap-3 px-5 py-5 sm:px-6">
+        <section class="rounded-[13px] border border-border-mint bg-surface-green px-4 py-4">
+          <div class="flex items-center justify-between gap-2">
+            <h3 class="font-display text-[15px] font-extrabold">Estado de la ficha</h3>
+            @if (profesional.isActive) {
+              <button
+                hlmBtn
+                variant="destructive"
+                size="xs"
+                type="button"
+                [disabled]="busyId() === profesional.id"
+                (click)="requestStatusChange(profesional)"
+              >
+                Desactivar ficha
+              </button>
+            } @else if (missingFor(profesional).length === 0) {
+              <button
+                hlmBtn
+                size="xs"
+                type="button"
+                [disabled]="busyId() === profesional.id"
+                (click)="requestStatusChange(profesional)"
+              >
+                Reactivar ficha
+              </button>
+            }
+          </div>
+
+          <div class="mt-2.5 grid justify-items-start gap-1.5">
+            <app-profesional-ficha-status [active]="profesional.isActive" />
+            <p class="text-[12px] leading-relaxed text-muted-foreground">
+              {{
+                profesional.isActive
+                  ? 'La ficha está disponible para la agenda cuando su cuenta y el local estén activos.'
+                  : 'La ficha no está disponible para la agenda.'
+              }}
+            </p>
+          </div>
+
+          @if (!profesional.isActive && missingFor(profesional).length > 0) {
+            <div
+              class="mt-2.5 rounded-[10px] border border-warning bg-warning/40 px-3 py-2.5 text-[12px] text-warning-foreground"
+            >
+              <strong class="block text-[13px] font-extrabold"
+                >No se puede reactivar todavía</strong
+              >
+              <p class="mt-0.5">Falta cumplir:</p>
+              <ul class="mt-1 list-disc pl-4">
+                @for (item of missingFor(profesional); track item) {
+                  <li>{{ item }}</li>
+                }
+              </ul>
+              <button
+                hlmBtn
+                class="mt-2"
+                variant="outline"
+                size="xs"
+                type="button"
+                (click)="openEdit(profesional, true)"
+              >
+                Editar asignaciones
+              </button>
+            </div>
+          }
+
+          <div
+            class="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-border-mint pt-2.5"
+          >
+            <span
+              class="text-[10px] font-extrabold tracking-[0.07em] text-muted-foreground uppercase"
+            >
+              Cuenta de acceso
+            </span>
+            <app-profesional-account-status
+              [status]="profesional.accountStatus"
+              [invitationFailed]="profesional.invitationFailed"
+            />
+          </div>
+          <p class="mt-2 flex items-start gap-1.5 text-[11px] leading-snug text-muted-foreground">
+            <app-staff-icon name="info" class="mt-px size-3.5" />
+            La ficha y la cuenta cambian de estado por separado.
+          </p>
+        </section>
+
+        <section class="rounded-[13px] border border-border bg-muted/40 px-4 py-4">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <h3 class="font-display text-[15px] font-extrabold">Cuenta de acceso</h3>
+            <span
+              class="rounded-[5px] bg-surface-green px-1.5 py-0.5 text-[10px] font-extrabold tracking-wide text-muted-foreground uppercase"
+            >
+              Profesional
+            </span>
+          </div>
+
+          <dl class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div class="min-w-0">
+              <dt class="text-[11px] text-muted-foreground">Nombre</dt>
+              <dd class="mt-0.5 text-[13px] [overflow-wrap:anywhere]">
+                {{ profesional.displayName }}
+              </dd>
+            </div>
+            <div class="min-w-0">
+              <dt class="text-[11px] text-muted-foreground">Estado de la cuenta</dt>
+              <dd class="mt-1">
+                <app-profesional-account-status
+                  [status]="profesional.accountStatus"
+                  [invitationFailed]="profesional.invitationFailed"
+                />
+              </dd>
+            </div>
+            <div class="min-w-0">
+              <dt class="text-[11px] text-muted-foreground">Correo</dt>
+              <dd class="mt-0.5 text-[13px] [overflow-wrap:anywhere]">{{ profesional.email }}</dd>
+            </div>
+            <div class="min-w-0">
+              <dt class="text-[11px] text-muted-foreground">Teléfono</dt>
+              <dd class="mt-0.5 text-[13px]">{{ profesional.phone || 'Sin teléfono' }}</dd>
+            </div>
+          </dl>
+
+          <p class="mt-3 text-[11px] leading-snug text-muted-foreground">
+            El nombre, el correo y el teléfono se editan en Personal. Esta ficha no los duplica.
+          </p>
+          <a hlmBtn variant="text" size="xs" class="mt-1" routerLink="/personal">
+            Abrir en Personal
+          </a>
+        </section>
+
+        <section class="rounded-[13px] border border-border bg-muted/40 px-4 py-4">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <h3 class="font-display text-[15px] font-extrabold">Especialidades</h3>
+            <span
+              class="rounded-[5px] bg-surface-green px-1.5 py-0.5 text-[10px] font-extrabold tracking-wide text-muted-foreground uppercase"
+            >
+              {{ activeEspecialidades(profesional) }}
+              {{ activeEspecialidades(profesional) === 1 ? 'activa' : 'activas' }}
+            </span>
+          </div>
+          <div class="mt-2.5">
+            <app-profesional-chips kind="especialidad" [items]="profesional.especialidades" />
+          </div>
+          @if (profesional.especialidades.length === 0) {
+            <p
+              class="mt-2 flex items-start gap-1.5 text-[11px] leading-snug text-warning-foreground"
+            >
+              <app-staff-icon name="alert" class="mt-px size-3.5" />
+              Sin especialidades asignadas. La ficha necesita al menos una activa para reactivarse.
+            </p>
+          }
+        </section>
+
+        <section class="rounded-[13px] border border-border bg-muted/40 px-4 py-4">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <h3 class="font-display text-[15px] font-extrabold">Locales de atención</h3>
+            <span
+              class="rounded-[5px] bg-surface-green px-1.5 py-0.5 text-[10px] font-extrabold tracking-wide text-muted-foreground uppercase"
+            >
+              {{ activeLocales(profesional) }}
+              {{ activeLocales(profesional) === 1 ? 'activo' : 'activos' }}
+            </span>
+          </div>
+          <div class="mt-2.5">
+            <app-profesional-chips kind="local" [items]="profesional.locales" />
+          </div>
+          @if (profesional.locales.length === 0) {
+            <p
+              class="mt-2 flex items-start gap-1.5 text-[11px] leading-snug text-warning-foreground"
+            >
+              <app-staff-icon name="alert" class="mt-px size-3.5" />
+              Sin locales de atención. La ficha necesita al menos uno activo para reactivarse.
+            </p>
+          }
+        </section>
+
+        <section class="rounded-[13px] border border-border bg-muted/40 px-4 py-4">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <h3 class="font-display text-[15px] font-extrabold">Acceso del profesional</h3>
+            <span
+              class="rounded-[5px] bg-surface-green px-1.5 py-0.5 text-[10px] font-extrabold tracking-wide text-muted-foreground uppercase"
+            >
+              Regla vigente
+            </span>
+          </div>
+          <p class="mt-2 text-[12px] font-semibold leading-relaxed">
+            {{ sentenceFor(profesional) }}
+          </p>
+          <ul class="mt-2 grid gap-1.5">
+            @for (check of checksFor(profesional); track check.label) {
+              <li
+                class="flex items-start gap-2 text-[11px] leading-snug"
+                [class]="check.ok ? 'text-muted-foreground' : 'text-warning-foreground'"
+              >
+                <app-staff-icon
+                  [name]="check.ok ? 'check' : 'alert'"
+                  class="mt-px size-3.5 shrink-0"
+                  [class]="check.ok ? 'text-primary' : 'text-warning-foreground'"
+                />
+                <span>
+                  <strong class="text-foreground">{{ check.label }}</strong>
+                  @if (check.detail) {
+                    <small class="mt-px block text-muted-foreground">{{ check.detail }}</small>
+                  }
+                </span>
+              </li>
+            }
+          </ul>
+          <p class="mt-2 flex items-start gap-1.5 text-[11px] leading-snug text-muted-foreground">
+            <app-staff-icon name="info" class="mt-px size-3.5" />
+            Los cambios de estado o de locales se aplican en la siguiente solicitud autorizada.
+          </p>
+        </section>
+      </div>
+    </div>
+  } @else if (panel()?.kind === 'editor') {
+    <app-profesional-editor
+      [initial]="editorInitial()"
+      [especialidades]="especialidades()"
+      [locales]="locales()"
+      [saving]="saving()"
+      [serverProblems]="serverProblems()"
+      [knownNames]="knownNames()"
+      (save)="requestSave($event)"
+      (cancel)="requestClosePanel()"
+      (edited)="clearServerProblem($event)"
+    />
+  }
+</app-staff-drawer>
+
+<app-staff-confirm
+  [open]="confirmation() !== null"
+  [title]="confirmTitle()"
+  [message]="confirmMessage()"
+  [confirmLabel]="confirmLabel()"
+  [danger]="confirmDanger()"
+  (confirmed)="confirm()"
+  (cancelled)="cancelConfirmation()"
+/>

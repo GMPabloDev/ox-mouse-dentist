@@ -70,6 +70,8 @@ async function renderPanel(
     providers: [
       provideRouter([
         { path: 'locales', component: BlankPage },
+        { path: 'personal', component: BlankPage },
+        { path: 'profesionales', component: BlankPage },
         { path: 'catalogo', component: BlankPage },
       ]),
       { provide: AUTH_API, useValue: api },
@@ -100,7 +102,7 @@ describe('PanelLayout', () => {
     localStorage.clear();
   });
 
-  it('muestra a administración la cuenta, los tres destinos y el rótulo de administración', async () => {
+  it('muestra a administración la cuenta, los cuatro destinos y el rótulo de administración', async () => {
     const { fixture } = await renderPanel();
     const host = fixture.nativeElement as HTMLElement;
     const sidebar = host.querySelector('aside')!;
@@ -108,12 +110,22 @@ describe('PanelLayout', () => {
     expect(host.textContent).toContain('Administrador');
     expect(sidebar.querySelector('a[href="/locales"]')).not.toBeNull();
     expect(sidebar.querySelector('a[href="/personal"]')).not.toBeNull();
+    expect(sidebar.querySelector('a[href="/profesionales"]')).not.toBeNull();
     expect(sidebar.querySelector('a[href="/catalogo"]')).not.toBeNull();
-    expect(sidebar.querySelectorAll('nav a').length).toBe(3);
+    expect(sidebar.querySelectorAll('nav a').length).toBe(4);
     expect(sidebar.textContent).toContain('Panel de administración');
     expect(sidebar.textContent).toContain('Administración');
     expect(sidebar.getAttribute('aria-label')).toBe('Panel de administración');
     expect(host.querySelector('header')!.textContent).toMatch(/Administración\s*\/\s*Locales/);
+  });
+
+  it('marca profesionales como sección del panel sin sumar entradas a otros perfiles', async () => {
+    const { fixture } = await renderPanel(ADMINISTRATOR, '/profesionales');
+    const host = fixture.nativeElement as HTMLElement;
+
+    expect(host.querySelector('header p')!.textContent).toMatch(
+      /Administración\s*\/\s*Profesionales/,
+    );
   });
 
   it.each<[string, SessionRecord]>([
@@ -130,6 +142,7 @@ describe('PanelLayout', () => {
     expect(sidebar.querySelector('a[href="/catalogo"]')).not.toBeNull();
     expect(sidebar.querySelector('a[href="/locales"]')).toBeNull();
     expect(sidebar.querySelector('a[href="/personal"]')).toBeNull();
+    expect(sidebar.querySelector('a[href="/profesionales"]')).toBeNull();
     expect(host.querySelector('header p')!.textContent!.replace(/\s+/g, ' ').trim()).toBe(
       'Catálogo',
     );

@@ -68,6 +68,13 @@ export const routes: Routes = [
         loadComponent: () => import('./features/staff/staff-page').then((m) => m.StaffPage),
       },
       {
+        path: 'profesionales',
+        title: 'Profesionales · MouseDent',
+        canActivate: [requireAdministrator],
+        loadComponent: () =>
+          import('./features/profesionales/profesional-page').then((m) => m.ProfesionalPage),
+      },
+      {
         path: 'locales',
         canActivate: [requireAdministrator],
         children: [

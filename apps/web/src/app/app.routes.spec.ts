@@ -1,5 +1,11 @@
 import { TestBed } from '@angular/core/testing';
-import type { Route } from '@angular/router';
+import {
+  provideRouter,
+  type ActivatedRouteSnapshot,
+  type CanActivateFn,
+  type Route,
+  type RouterStateSnapshot,
+} from '@angular/router';
 import { homeRedirect, routes } from './app.routes';
 import {
   requireAdministrator,
@@ -50,13 +56,48 @@ describe('rutas por perfil', () => {
     expect(TestBed.runInInjectionContext(homeRedirect)).toBe('/catalogo');
   });
 
-  it('reserva personal y locales a administración y deja el catálogo al equipo', () => {
+  it('reserva personal, profesionales y locales a administración y deja el catálogo al equipo', () => {
     expect(child('personal').canActivate).toEqual([requireAdministrator]);
     expect(child('locales').canActivate).toEqual([requireAdministrator]);
     expect(child('catalogo').canActivate).toBeUndefined();
     expect(child('catalogo').loadComponent).toBeTypeOf('function');
     expect(child('')?.redirectTo).toBe(homeRedirect);
   });
+
+  it('protege profesionales con el perfil de administración y su propio título', () => {
+    const profesionales = child('profesionales');
+
+    expect(profesionales.canActivate).toEqual([requireAdministrator]);
+    expect(profesionales.title).toBe('Profesionales · MouseDent');
+    expect(profesionales.loadComponent).toBeTypeOf('function');
+  });
+
+  it.each(['Recepcion', 'Profesional'])(
+    'manda a %s al acceso restringido si abre profesionales por ruta directa',
+    () => {
+      const guard = child('profesionales').canActivate![0] as CanActivateFn;
+
+      TestBed.configureTestingModule({
+        providers: [
+          provideRouter([]),
+          {
+            provide: SessionService,
+            useValue: {
+              isSessionActive: () => true,
+              isAdministrator: () => false,
+              expire: vi.fn(),
+            },
+          },
+        ],
+      });
+
+      const result = TestBed.runInInjectionContext(() =>
+        guard({} as ActivatedRouteSnapshot, { url: '/profesionales' } as RouterStateSnapshot),
+      );
+
+      expect(String(result)).toBe('/sin-acceso');
+    },
+  );
 
   it('deja la bienvenida a los perfiles sin módulos y exige sesión', () => {
     expect(route('bienvenida').canActivate).toEqual([requireNonAdministrator]);

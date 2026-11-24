@@ -21,6 +21,8 @@ import { GeneratedCatalogoApi } from './core/catalogo/generated-catalogo-api';
 import { CATALOGO_API } from './core/catalogo/catalogo-api';
 import { GeneratedLocalesApi } from './core/locales/generated-locales-api';
 import { LOCALES_API } from './core/locales/locales-api';
+import { GeneratedProfesionalesApi } from './core/profesionales/generated-profesionales-api';
+import { PROFESIONALES_API } from './core/profesionales/profesionales-api';
 import { GeneratedStaffApi } from './core/staff/generated-staff-api';
 import { STAFF_API } from './core/staff/staff-api';
 
@@ -39,6 +41,7 @@ export const appConfig: ApplicationConfig = {
     { provide: LOCALES_API, useClass: GeneratedLocalesApi },
     { provide: CATALOGO_API, useClass: GeneratedCatalogoApi },
     { provide: STAFF_API, useClass: GeneratedStaffApi },
+    { provide: PROFESIONALES_API, useClass: GeneratedProfesionalesApi },
 
     provideAppInitializer(() => {
       const browser = isPlatformBrowser(inject(PLATFORM_ID));

@@ -1,0 +1,360 @@
+<div class="flex items-start justify-between gap-4 border-b border-border px-5 py-6 sm:px-6">
+  <div class="min-w-0">
+    <p class="text-[11px] font-extrabold tracking-[1.6px] text-primary uppercase">
+      {{ isNew() ? 'Alta de profesional' : 'Ficha del profesional' }}
+    </p>
+    <h2
+      id="profesional-editor-title"
+      class="mt-1.5 font-display text-[22px] leading-tight font-extrabold tracking-[-0.4px] text-foreground"
+    >
+      {{ isNew() ? 'Nuevo profesional' : 'Editar ficha de ' + initial().displayName }}
+    </h2>
+    <p class="mt-1.5 text-[13px] text-muted-foreground">
+      {{
+        isNew()
+          ? 'La cuenta de acceso se crea con perfil Profesional y queda pendiente hasta que la persona cree su contraseña.'
+          : 'Actualiza la colegiatura, las especialidades y los locales de atención. Los datos de la cuenta se editan en Personal.'
+      }}
+    </p>
+  </div>
+  <button
+    class="-mr-1 rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+    type="button"
+    aria-label="Cerrar formulario"
+    (click)="requestCancel()"
+  >
+    <app-staff-icon name="close" class="size-5" />
+  </button>
+</div>
+
+<form class="flex min-h-0 flex-1 flex-col" (submit)="submit($event)" novalidate>
+  <div class="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-6">
+    @if (fieldProblem('form'); as message) {
+      <div class="mb-5">
+        <app-staff-notice tone="error" title="No pudimos guardar los cambios">
+          {{ message }} Los datos del formulario se conservan.
+        </app-staff-notice>
+      </div>
+    }
+
+    <div class="grid gap-6">
+      @if (isNew()) {
+        <section>
+          <h3 class="text-[15px] font-extrabold">Persona y cuenta</h3>
+          <p class="mt-0.5 text-xs text-muted-foreground">
+            Si el correo ya pertenece a una cuenta Profesional sin ficha, el alta vincula esa
+            cuenta.
+          </p>
+
+          <div class="mt-3">
+            <label class="mb-2 block text-[13px] font-bold" for="profesional-name">
+              Nombre completo
+            </label>
+            <input
+              hlmInput
+              id="profesional-name"
+              name="displayName"
+              type="text"
+              autocomplete="name"
+              maxlength="120"
+              required
+              [value]="draft().displayName"
+              [attr.aria-invalid]="fieldProblem('displayName') ? 'true' : null"
+              [attr.aria-describedby]="
+                fieldProblem('displayName') ? 'profesional-name-error' : null
+              "
+              (input)="onNameInput($event)"
+            />
+            @if (fieldProblem('displayName'); as message) {
+              <p id="profesional-name-error" class="mt-2 text-[13px] text-destructive">
+                {{ message }}
+              </p>
+            }
+          </div>
+
+          @if (homonymNames().length > 0) {
+            <div class="mt-3">
+              <app-staff-notice tone="warn" title="Posible homónimo">
+                {{ homonymMessage() }}
+              </app-staff-notice>
+            </div>
+          }
+
+          <div class="mt-4">
+            <label class="mb-2 block text-[13px] font-bold" for="profesional-email">
+              Correo electrónico
+            </label>
+            <input
+              hlmInput
+              id="profesional-email"
+              name="email"
+              type="email"
+              autocomplete="email"
+              maxlength="256"
+              required
+              [value]="draft().email"
+              [attr.aria-invalid]="fieldProblem('email') ? 'true' : null"
+              [attr.aria-describedby]="fieldProblem('email') ? 'profesional-email-error' : null"
+              (input)="onEmailInput($event)"
+            />
+            @if (fieldProblem('email'); as message) {
+              <p id="profesional-email-error" class="mt-2 text-[13px] text-destructive">
+                {{ message }}
+              </p>
+            }
+          </div>
+
+          <div class="mt-4">
+            <label class="mb-2 block text-[13px] font-bold" for="profesional-colegiatura">
+              Número de colegiatura
+              <span class="font-semibold text-muted-foreground">· Opcional</span>
+            </label>
+            <input
+              hlmInput
+              id="profesional-colegiatura"
+              name="colegiatura"
+              type="text"
+              autocomplete="off"
+              [value]="draft().colegiatura"
+              [attr.aria-invalid]="fieldProblem('colegiatura') ? 'true' : null"
+              [attr.aria-describedby]="
+                'profesional-colegiatura-help' +
+                (fieldProblem('colegiatura') ? ' profesional-colegiatura-error' : '')
+              "
+              (input)="onColegiaturaInput($event)"
+            />
+            <p id="profesional-colegiatura-help" class="mt-2 text-xs text-muted-foreground">
+              Entre 1 y 30 caracteres, sin contar los espacios de los extremos. Es único entre todas
+              las fichas, incluidas las inactivas.
+            </p>
+            @if (fieldProblem('colegiatura'); as message) {
+              <p id="profesional-colegiatura-error" class="mt-2 text-[13px] text-destructive">
+                {{ message }}
+              </p>
+            }
+          </div>
+        </section>
+      } @else {
+        <section>
+          <h3 class="text-[15px] font-extrabold">Cuenta vinculada</h3>
+          <p class="mt-0.5 text-xs text-muted-foreground">
+            El nombre, el correo y el teléfono viven en la cuenta. Esta ficha no los duplica.
+          </p>
+
+          <div
+            class="mt-3 flex flex-wrap items-center gap-3 rounded-[11px] border border-border bg-surface-green px-3 py-3"
+          >
+            <hlm-avatar class="size-10 bg-accent text-accent-foreground" aria-hidden="true">
+              <span hlmAvatarFallback class="text-[12px] font-extrabold">{{ initials() }}</span>
+            </hlm-avatar>
+            <div class="min-w-0 flex-1">
+              <strong class="block text-[14px] [overflow-wrap:anywhere]">{{
+                initial().displayName
+              }}</strong>
+              <span class="block text-xs text-muted-foreground [overflow-wrap:anywhere]">{{
+                initial().email
+              }}</span>
+              <span class="block text-xs text-muted-foreground">{{
+                initial().phone || 'Sin teléfono registrado'
+              }}</span>
+            </div>
+            @if (initial().accountStatus; as status) {
+              <app-profesional-account-status
+                [status]="status"
+                [invitationFailed]="initial().invitationFailed"
+              />
+            }
+          </div>
+
+          <a hlmBtn variant="text" size="xs" class="mt-1" routerLink="/personal">
+            Abrir en Personal
+          </a>
+        </section>
+
+        <section>
+          <h3 class="text-[15px] font-extrabold">Colegiatura</h3>
+          <div class="mt-3">
+            <label class="mb-2 block text-[13px] font-bold" for="profesional-colegiatura">
+              Número de colegiatura
+              <span class="font-semibold text-muted-foreground">· Opcional</span>
+            </label>
+            <input
+              hlmInput
+              id="profesional-colegiatura"
+              name="colegiatura"
+              type="text"
+              autocomplete="off"
+              [value]="draft().colegiatura"
+              [attr.aria-invalid]="fieldProblem('colegiatura') ? 'true' : null"
+              [attr.aria-describedby]="
+                'profesional-colegiatura-help' +
+                (fieldProblem('colegiatura') ? ' profesional-colegiatura-error' : '')
+              "
+              (input)="onColegiaturaInput($event)"
+            />
+            <p id="profesional-colegiatura-help" class="mt-2 text-xs text-muted-foreground">
+              Entre 1 y 30 caracteres, sin contar los espacios de los extremos. La comparación
+              ignora mayúsculas y espacios.
+            </p>
+            @if (fieldProblem('colegiatura'); as message) {
+              <p id="profesional-colegiatura-error" class="mt-2 text-[13px] text-destructive">
+                {{ message }}
+              </p>
+            }
+          </div>
+        </section>
+      }
+
+      <fieldset
+        class="min-w-0"
+        aria-describedby="profesional-especialidades-help profesional-especialidades-error"
+      >
+        <legend class="sr-only">Especialidades</legend>
+        <div class="flex items-center justify-between gap-2">
+          <h3 class="text-[15px] font-extrabold">Especialidades</h3>
+          <span
+            class="shrink-0 rounded-[5px] bg-surface-green px-1.5 py-0.5 text-[10px] font-extrabold tracking-wide text-muted-foreground uppercase"
+          >
+            {{ activeEspecialidades() }}
+            {{ activeEspecialidades() === 1 ? 'activa' : 'activas' }}
+          </span>
+        </div>
+        <p id="profesional-especialidades-help" class="mt-0.5 text-xs text-muted-foreground">
+          {{ especialidadHelp() }}
+          @if (keepsInactiveEspecialidades()) {
+            Las asignaciones inactivas se conservan.
+          }
+        </p>
+
+        <div class="mt-3 grid gap-2">
+          @for (especialidad of visibleEspecialidades(); track especialidad.id) {
+            <label
+              class="flex items-center gap-2.5 rounded-[10px] border px-3 py-[9px] text-[13px]"
+              [class]="
+                especialidad.isActive
+                  ? 'border-border bg-card'
+                  : 'border-dashed border-border-strong bg-muted/70 text-muted-foreground'
+              "
+            >
+              <input
+                class="size-[17px] shrink-0 accent-primary disabled:cursor-not-allowed"
+                type="checkbox"
+                name="especialidad"
+                [value]="especialidad.id"
+                [checked]="especialidadSelected(especialidad.id)"
+                [disabled]="especialidadDisabled(especialidad)"
+                (change)="toggleEspecialidad(especialidad.id, $event)"
+              />
+              <span class="min-w-0 [overflow-wrap:anywhere]">{{ especialidad.name }}</span>
+              @if (!especialidad.isActive) {
+                <small class="ml-auto shrink-0 text-[10px] font-extrabold tracking-wide uppercase">
+                  Inactiva
+                </small>
+              }
+            </label>
+          } @empty {
+            <p class="text-[13px] text-muted-foreground">
+              Todavía no hay especialidades activas en el catálogo.
+            </p>
+          }
+        </div>
+
+        @if (fieldProblem('especialidadIds'); as message) {
+          <p id="profesional-especialidades-error" class="mt-2 text-[13px] text-destructive">
+            {{ message }}
+          </p>
+        } @else {
+          <p id="profesional-especialidades-error" class="sr-only"></p>
+        }
+      </fieldset>
+
+      <fieldset
+        class="min-w-0"
+        aria-describedby="profesional-locales-help profesional-locales-error"
+      >
+        <legend class="sr-only">Locales de atención</legend>
+        <div class="flex items-center justify-between gap-2">
+          <h3 class="text-[15px] font-extrabold">Locales de atención</h3>
+          <span
+            class="shrink-0 rounded-[5px] bg-surface-green px-1.5 py-0.5 text-[10px] font-extrabold tracking-wide text-muted-foreground uppercase"
+          >
+            {{ activeLocales() }} {{ activeLocales() === 1 ? 'activo' : 'activos' }}
+          </span>
+        </div>
+        <p id="profesional-locales-help" class="mt-0.5 text-xs text-muted-foreground">
+          {{ localHelp() }}
+          @if (keepsInactiveLocales()) {
+            Las asignaciones inactivas se conservan.
+          }
+        </p>
+
+        <div class="mt-3 grid gap-2">
+          @for (local of visibleLocales(); track local.id) {
+            <label
+              class="flex items-center gap-2.5 rounded-[10px] border px-3 py-[9px] text-[13px]"
+              [class]="
+                local.isActive
+                  ? 'border-border bg-card'
+                  : 'border-dashed border-border-strong bg-muted/70 text-muted-foreground'
+              "
+            >
+              <input
+                class="size-[17px] shrink-0 accent-primary disabled:cursor-not-allowed"
+                type="checkbox"
+                name="local"
+                [value]="local.id"
+                [checked]="localSelected(local.id)"
+                [disabled]="localDisabled(local)"
+                (change)="toggleLocal(local.id, $event)"
+              />
+              <span class="min-w-0 [overflow-wrap:anywhere]">{{ local.name }}</span>
+              @if (!local.isActive) {
+                <small class="ml-auto shrink-0 text-[10px] font-extrabold tracking-wide uppercase">
+                  Inactivo
+                </small>
+              }
+            </label>
+          } @empty {
+            <p class="text-[13px] text-muted-foreground">
+              Todavía no hay locales activos registrados para asignar.
+            </p>
+          }
+        </div>
+
+        @if (fieldProblem('localIds'); as message) {
+          <p id="profesional-locales-error" class="mt-2 text-[13px] text-destructive">
+            {{ message }}
+          </p>
+        } @else {
+          <p id="profesional-locales-error" class="sr-only"></p>
+        }
+      </fieldset>
+
+      <app-staff-notice tone="neutral" title="Cómo se guarda esta ficha">
+        {{
+          isNew()
+            ? 'La ficha se guarda primero. Si el envío de la invitación falla, podrás reenviarla desde la ficha.'
+            : 'Los cambios de locales se aplican en la siguiente solicitud autorizada.'
+        }}
+      </app-staff-notice>
+    </div>
+  </div>
+
+  <div
+    class="flex flex-wrap items-center justify-between gap-3 border-t border-border px-5 py-4 sm:px-6"
+  >
+    <p class="max-w-[210px] text-[11px] leading-snug text-muted-foreground">
+      {{
+        isNew()
+          ? 'La cuenta nace pendiente y sin teléfono.'
+          : 'Revisa las asignaciones antes de guardar.'
+      }}
+    </p>
+    <div class="flex flex-wrap justify-end gap-2">
+      <button hlmBtn variant="outline" type="button" (click)="requestCancel()">Cancelar</button>
+      <button hlmBtn type="submit" [disabled]="saving()">
+        {{ saving() ? 'Guardando…' : isNew() ? 'Crear y enviar invitación' : 'Guardar cambios' }}
+      </button>
+    </div>
+  </div>
+</form>
