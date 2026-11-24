@@ -235,6 +235,28 @@ public sealed class StaffAccountEndpointsTests(MouseDentApiFactory factory) : IC
     }
 
     [Fact]
+    public async Task The_validation_message_of_the_edition_explains_the_professional_profile()
+    {
+        using var admin = await AdminAsync();
+        var email = StaffTestHelpers.UniqueEmail("validacion.perfil.edicion");
+        using var created = await StaffTestHelpers.CreateStaffAsync(admin, email, StaffRole.Admin);
+        created.StatusCode.ShouldBe(HttpStatusCode.Created);
+        var account = await StaffTestHelpers.ReadStaffAsync(created);
+
+        using var response = await StaffTestHelpers.UpdateStaffAsync(
+            admin,
+            account.Id,
+            email,
+            "Coordinador");
+
+        response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        var errors = await StaffTestHelpers.ReadValidationProblemAsync(response);
+        var message = errors["Profile"].ShouldHaveSingleItem();
+        message.ShouldBe(
+            "Desde personal se asignan Administrador o Recepcion; una cuenta existente conserva su perfil Profesional.");
+    }
+
+    [Fact]
     public async Task A_repeated_email_is_rejected_even_when_the_account_is_inactive()
     {
         using var admin = await AdminAsync();

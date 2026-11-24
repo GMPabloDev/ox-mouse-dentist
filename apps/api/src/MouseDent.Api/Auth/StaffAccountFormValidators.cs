@@ -62,7 +62,7 @@ public sealed class CreateStaffAccountFormValidator : StaffAccountFormValidator<
 public sealed class UpdateStaffAccountFormValidator : StaffAccountFormValidator<UpdateStaffAccountForm>
 {
     public UpdateStaffAccountFormValidator()
-        : base("Elige uno de los perfiles: Administrador, Recepcion o Profesional.")
+        : base("Desde personal se asignan Administrador o Recepcion; una cuenta existente conserva su perfil Profesional.")
     {
     }
 }
