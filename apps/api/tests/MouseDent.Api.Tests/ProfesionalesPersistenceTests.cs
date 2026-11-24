@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using MouseDent.Domain.Auth;
@@ -104,12 +105,9 @@ public sealed class ProfesionalesPersistenceTests
                 .ShouldBe(ResultadoGuardadoProfesional.ColegiaturaDuplicada);
 
             await using var verify = CreateContext(path);
-            var verifyStore = new EfProfesionales(verify);
 
             (await verify.Profesionales.CountAsync(token)).ShouldBe(1);
-            (await verifyStore.ColegiaturaEstaTomadaAsync("COP12345", null, token)).ShouldBeTrue();
-            (await verifyStore.ColegiaturaEstaTomadaAsync("COP12345", primera.Id, token)).ShouldBeFalse();
-            (await verifyStore.ColegiaturaEstaTomadaAsync("COP54321", null, token)).ShouldBeFalse();
+            (await verify.Profesionales.SingleAsync(token)).ColegiaturaNormalizada.ShouldBe("COP12345");
         }
         finally
         {
@@ -789,6 +787,410 @@ public sealed class ProfesionalesPersistenceTests
     }
 
     [Fact]
+    public async Task Reading_the_ficha_with_both_collections_is_a_split_query_without_the_20504_warning()
+    {
+        var path = Path.GetTempFileName();
+        try
+        {
+            var token = TestContext.Current.CancellationToken;
+            await using var setup = CreateContext(path);
+            await setup.Database.MigrateAsync(token);
+
+            var cuenta = await SeedProfessionalAccountAsync(setup, "lectura-separada@mousedent.test");
+            var especialidad = await SeedEspecialidadAsync(setup, "Odontología");
+            var local = await SeedLocalAsync(setup, "Sede Lectura Separada");
+            var ficha = Profesional.Crear(
+                cuenta,
+                "COP 1",
+                [especialidad],
+                [local],
+                Activos([especialidad], [local]));
+
+            (await new EfProfesionales(setup).GuardarAsync(ficha, token))
+                .ShouldBe(ResultadoGuardadoProfesional.Guardado);
+
+            // El aviso 20504 se convierte en error: si la lectura o el guardado vuelven a
+            // usar una sola consulta con las dos colecciones, la prueba falla.
+            var options = new DbContextOptionsBuilder<MouseDentDbContext>()
+                .UseSqlite($"Data Source={path}")
+                .ConfigureWarnings(warnings => warnings.Throw(RelationalEventId.MultipleCollectionIncludeWarning))
+                .Options;
+
+            await using var read = new MouseDentDbContext(options);
+            var store = new EfProfesionales(read);
+            var leida = await store.BuscarAsync(ficha.Id, token);
+
+            leida.ShouldNotBeNull();
+            leida.EspecialidadIds.ShouldBe([especialidad]);
+            leida.LocalIds.ShouldBe([local]);
+
+            leida.Editar("COP 2", [especialidad], [local], Activos([especialidad], [local]));
+            (await store.GuardarAsync(leida, token)).ShouldBe(ResultadoGuardadoProfesional.Guardado);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public async Task A_stale_edit_cannot_leave_an_active_ficha_without_active_assignments()
+    {
+        var path = Path.GetTempFileName();
+        try
+        {
+            var token = TestContext.Current.CancellationToken;
+            await using var setup = CreateContext(path);
+            await setup.Database.MigrateAsync(token);
+
+            var cuenta = await SeedProfessionalAccountAsync(setup, "borrado-intercalado@mousedent.test");
+            var especialidad = await SeedEspecialidadAsync(setup, "Odontología");
+            var local = await SeedLocalAsync(setup, "Sede Borrado Intercalado");
+            var store = new EfProfesionales(setup);
+
+            (await store.GuardarAsync(
+                Profesional.Crear(cuenta, "COP 1", [especialidad], [local], Activos([especialidad], [local])),
+                token)).ShouldBe(ResultadoGuardadoProfesional.Guardado);
+
+            var desactivada = await store.BuscarPorCuentaAsync(cuenta, token);
+            desactivada.ShouldNotBeNull();
+            desactivada.Desactivar();
+            (await store.GuardarAsync(desactivada, token)).ShouldBe(ResultadoGuardadoProfesional.Guardado);
+
+            // La solicitud A abre la edición de la ficha inactiva y su escritura ya tiene
+            // rastreada esa versión cuando otra solicitud reactiva la ficha.
+            await using var contextoA = CreateContext(path);
+            var copiaA = await new EfProfesionales(contextoA).BuscarPorCuentaAsync(cuenta, token);
+            copiaA.ShouldNotBeNull();
+            copiaA.IsActive.ShouldBeFalse();
+            await contextoA.Profesionales
+                .Include(ficha => ficha.Especialidades)
+                .Include(ficha => ficha.Locales)
+                .SingleAsync(ficha => ficha.StaffAccountId == cuenta, token);
+
+            await using (var contextoB = CreateContext(path))
+            {
+                var storeB = new EfProfesionales(contextoB);
+                var copiaB = await storeB.BuscarPorCuentaAsync(cuenta, token);
+                copiaB.ShouldNotBeNull();
+                copiaB.Activar(Activos([especialidad], [local]));
+                (await storeB.GuardarAsync(copiaB, token)).ShouldBe(ResultadoGuardadoProfesional.Guardado);
+            }
+
+            // A escribe desde su copia inactiva: retira las asignaciones sin cambiar IsActive,
+            // así que la reactivación de B quedaría sin especialidad ni local activos.
+            copiaA.Editar(null, [], [], Activos([], []));
+            (await new EfProfesionales(contextoA).GuardarAsync(copiaA, token))
+                .ShouldBe(ResultadoGuardadoProfesional.ActivacionIncompleta);
+
+            await using var verify = CreateContext(path);
+            var conservada = await new EfProfesionales(verify).BuscarPorCuentaAsync(cuenta, token);
+
+            conservada.ShouldNotBeNull();
+            conservada.IsActive.ShouldBeTrue();
+            conservada.EspecialidadIds.ShouldBe([especialidad]);
+            conservada.LocalIds.ShouldBe([local]);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public async Task A_stale_inactive_edit_that_deactivates_the_ficha_can_retire_its_assignments()
+    {
+        var path = Path.GetTempFileName();
+        try
+        {
+            var token = TestContext.Current.CancellationToken;
+            await using var setup = CreateContext(path);
+            await setup.Database.MigrateAsync(token);
+
+            var cuenta = await SeedProfessionalAccountAsync(setup, "borrado-desactivacion@mousedent.test");
+            var especialidad = await SeedEspecialidadAsync(setup, "Odontología");
+            var local = await SeedLocalAsync(setup, "Sede Borrado Desactivación");
+            var store = new EfProfesionales(setup);
+
+            (await store.GuardarAsync(
+                Profesional.Crear(cuenta, "COP 1", [especialidad], [local], Activos([especialidad], [local])),
+                token)).ShouldBe(ResultadoGuardadoProfesional.Guardado);
+
+            var desactivada = await store.BuscarPorCuentaAsync(cuenta, token);
+            desactivada.ShouldNotBeNull();
+            desactivada.Desactivar();
+            (await store.GuardarAsync(desactivada, token)).ShouldBe(ResultadoGuardadoProfesional.Guardado);
+
+            await using var contextoA = CreateContext(path);
+            var copiaA = await new EfProfesionales(contextoA).BuscarPorCuentaAsync(cuenta, token);
+            copiaA.ShouldNotBeNull();
+            copiaA.IsActive.ShouldBeFalse();
+
+            await using (var contextoB = CreateContext(path))
+            {
+                var storeB = new EfProfesionales(contextoB);
+                var copiaB = await storeB.BuscarPorCuentaAsync(cuenta, token);
+                copiaB.ShouldNotBeNull();
+                copiaB.Activar(Activos([especialidad], [local]));
+                (await storeB.GuardarAsync(copiaB, token)).ShouldBe(ResultadoGuardadoProfesional.Guardado);
+            }
+
+            // A escribe con una copia inactiva y la escritura carga la ficha ya activa: la
+            // deja inactiva antes de borrar, así que el resultado es válido y no debe abortar.
+            copiaA.Editar(null, [], [], Activos([], []));
+            (await new EfProfesionales(contextoA).GuardarAsync(copiaA, token))
+                .ShouldBe(ResultadoGuardadoProfesional.Guardado);
+
+            await using var verify = CreateContext(path);
+            var guardada = await new EfProfesionales(verify).BuscarPorCuentaAsync(cuenta, token);
+
+            guardada.ShouldNotBeNull();
+            guardada.IsActive.ShouldBeFalse();
+            guardada.EspecialidadIds.ShouldBeEmpty();
+            guardada.LocalIds.ShouldBeEmpty();
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public async Task Deleting_the_last_active_specialty_of_an_active_ficha_is_rejected()
+    {
+        var path = Path.GetTempFileName();
+        try
+        {
+            var token = TestContext.Current.CancellationToken;
+            await using var setup = CreateContext(path);
+            await setup.Database.MigrateAsync(token);
+
+            var cuenta = await SeedProfessionalAccountAsync(setup, "borrado-ultima-especialidad@mousedent.test");
+            var especialidad = await SeedEspecialidadAsync(setup, "Odontología");
+            var local = await SeedLocalAsync(setup, "Sede Última Especialidad");
+            var store = new EfProfesionales(setup);
+
+            (await store.GuardarAsync(
+                Profesional.Crear(cuenta, "COP 1", [especialidad], [local], Activos([especialidad], [local])),
+                token)).ShouldBe(ResultadoGuardadoProfesional.Guardado);
+
+            await using (var delete = CreateContext(path))
+            {
+                delete.ProfesionalEspecialidades.Remove(await delete.ProfesionalEspecialidades
+                    .SingleAsync(asignada => asignada.EspecialidadId == especialidad, token));
+
+                var error = await Should.ThrowAsync<DbUpdateException>(
+                    async () => await delete.SaveChangesAsync(token));
+
+                error.InnerException.ShouldNotBeNull();
+                error.InnerException.Message.ShouldContain("profesional_activacion_incompleta");
+            }
+
+            await using var verify = CreateContext(path);
+
+            (await verify.ProfesionalEspecialidades.CountAsync(token)).ShouldBe(1);
+            (await verify.ProfesionalLocales.CountAsync(token)).ShouldBe(1);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public async Task Deleting_the_last_active_local_of_an_active_ficha_is_rejected()
+    {
+        var path = Path.GetTempFileName();
+        try
+        {
+            var token = TestContext.Current.CancellationToken;
+            await using var setup = CreateContext(path);
+            await setup.Database.MigrateAsync(token);
+
+            var cuenta = await SeedProfessionalAccountAsync(setup, "borrado-ultimo-local@mousedent.test");
+            var especialidad = await SeedEspecialidadAsync(setup, "Odontología");
+            var local = await SeedLocalAsync(setup, "Sede Último Local");
+            var store = new EfProfesionales(setup);
+
+            (await store.GuardarAsync(
+                Profesional.Crear(cuenta, "COP 1", [especialidad], [local], Activos([especialidad], [local])),
+                token)).ShouldBe(ResultadoGuardadoProfesional.Guardado);
+
+            await using (var delete = CreateContext(path))
+            {
+                delete.ProfesionalLocales.Remove(await delete.ProfesionalLocales
+                    .SingleAsync(asignado => asignado.LocalId == local, token));
+
+                var error = await Should.ThrowAsync<DbUpdateException>(
+                    async () => await delete.SaveChangesAsync(token));
+
+                error.InnerException.ShouldNotBeNull();
+                error.InnerException.Message.ShouldContain("profesional_activacion_incompleta");
+            }
+
+            await using var verify = CreateContext(path);
+
+            (await verify.ProfesionalEspecialidades.CountAsync(token)).ShouldBe(1);
+            (await verify.ProfesionalLocales.CountAsync(token)).ShouldBe(1);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public async Task Deleting_assignments_that_leave_another_active_one_is_allowed()
+    {
+        var path = Path.GetTempFileName();
+        try
+        {
+            var token = TestContext.Current.CancellationToken;
+            await using var setup = CreateContext(path);
+            await setup.Database.MigrateAsync(token);
+
+            var cuenta = await SeedProfessionalAccountAsync(setup, "borrado-conserva@mousedent.test");
+            var odontologia = await SeedEspecialidadAsync(setup, "Odontología");
+            var ortodoncia = await SeedEspecialidadAsync(setup, "Ortodoncia");
+            var norte = await SeedLocalAsync(setup, "Sede Norte Borrado");
+            var sur = await SeedLocalAsync(setup, "Sede Sur Borrado");
+            var store = new EfProfesionales(setup);
+            var especialidades = new[] { odontologia, ortodoncia };
+            var locales = new[] { norte, sur };
+
+            (await store.GuardarAsync(
+                Profesional.Crear(cuenta, "COP 1", especialidades, locales, Activos(especialidades, locales)),
+                token)).ShouldBe(ResultadoGuardadoProfesional.Guardado);
+
+            await using (var delete = CreateContext(path))
+            {
+                delete.ProfesionalEspecialidades.Remove(await delete.ProfesionalEspecialidades
+                    .SingleAsync(asignada => asignada.EspecialidadId == odontologia, token));
+                delete.ProfesionalLocales.Remove(await delete.ProfesionalLocales
+                    .SingleAsync(asignado => asignado.LocalId == norte, token));
+
+                await delete.SaveChangesAsync(token);
+            }
+
+            await using var verify = CreateContext(path);
+
+            (await verify.ProfesionalEspecialidades.SingleAsync(token)).EspecialidadId.ShouldBe(ortodoncia);
+            (await verify.ProfesionalLocales.SingleAsync(token)).LocalId.ShouldBe(sur);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public async Task Deleting_inactive_assignments_does_not_trip_the_delete_guard()
+    {
+        var path = Path.GetTempFileName();
+        try
+        {
+            var token = TestContext.Current.CancellationToken;
+            await using var setup = CreateContext(path);
+            await setup.Database.MigrateAsync(token);
+
+            var cuenta = await SeedProfessionalAccountAsync(setup, "borrado-retencion@mousedent.test");
+            var activa = await SeedEspecialidadAsync(setup, "Odontología");
+            var inactiva = await SeedEspecialidadAsync(setup, "Ortodoncia");
+            var activo = await SeedLocalAsync(setup, "Sede Activa Borrado");
+            var inactivo = await SeedLocalAsync(setup, "Sede Inactiva Borrado");
+            var store = new EfProfesionales(setup);
+            var especialidades = new[] { activa, inactiva };
+            var locales = new[] { activo, inactivo };
+
+            (await store.GuardarAsync(
+                Profesional.Crear(cuenta, "COP 1", especialidades, locales, Activos(especialidades, locales)),
+                token)).ShouldBe(ResultadoGuardadoProfesional.Guardado);
+
+            // Las asignaciones inactivas se retiran sin tocar las activas de la ficha.
+            await DeactivateEspecialidadAsync(path, inactiva);
+            await DeactivateLocalAsync(path, inactivo);
+
+            await using (var delete = CreateContext(path))
+            {
+                delete.ProfesionalEspecialidades.Remove(await delete.ProfesionalEspecialidades
+                    .SingleAsync(asignada => asignada.EspecialidadId == inactiva, token));
+                delete.ProfesionalLocales.Remove(await delete.ProfesionalLocales
+                    .SingleAsync(asignado => asignado.LocalId == inactivo, token));
+
+                await delete.SaveChangesAsync(token);
+            }
+
+            // Una ficha inactiva puede quedarse sin asignaciones activas.
+            setup.ChangeTracker.Clear();
+            var inactivaFicha = await store.BuscarPorCuentaAsync(cuenta, token);
+            inactivaFicha.ShouldNotBeNull();
+            inactivaFicha.Desactivar();
+            (await store.GuardarAsync(inactivaFicha, token)).ShouldBe(ResultadoGuardadoProfesional.Guardado);
+            await DeactivateEspecialidadAsync(path, activa);
+            await DeactivateLocalAsync(path, activo);
+
+            await using (var delete = CreateContext(path))
+            {
+                delete.ProfesionalEspecialidades.RemoveRange(delete.ProfesionalEspecialidades);
+                delete.ProfesionalLocales.RemoveRange(delete.ProfesionalLocales);
+
+                await delete.SaveChangesAsync(token);
+            }
+
+            await using var verify = CreateContext(path);
+
+            (await verify.ProfesionalEspecialidades.CountAsync(token)).ShouldBe(0);
+            (await verify.ProfesionalLocales.CountAsync(token)).ShouldBe(0);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public async Task Replacing_the_last_active_assignments_in_one_save_is_allowed()
+    {
+        var path = Path.GetTempFileName();
+        try
+        {
+            var token = TestContext.Current.CancellationToken;
+            await using var setup = CreateContext(path);
+            await setup.Database.MigrateAsync(token);
+
+            var cuenta = await SeedProfessionalAccountAsync(setup, "borrado-intercambio@mousedent.test");
+            var odontologia = await SeedEspecialidadAsync(setup, "Odontología");
+            var ortodoncia = await SeedEspecialidadAsync(setup, "Ortodoncia");
+            var norte = await SeedLocalAsync(setup, "Sede Norte Intercambio");
+            var sur = await SeedLocalAsync(setup, "Sede Sur Intercambio");
+            var store = new EfProfesionales(setup);
+
+            (await store.GuardarAsync(
+                Profesional.Crear(cuenta, "COP 1", [odontologia], [norte], Activos([odontologia], [norte])),
+                token)).ShouldBe(ResultadoGuardadoProfesional.Guardado);
+
+            // Cambiar la única especialidad y el único local activos por otros activos es
+            // una edición válida y no puede confundirse con un borrado que deja la ficha vacía.
+            var ficha = await store.BuscarPorCuentaAsync(cuenta, token);
+            ficha.ShouldNotBeNull();
+            ficha.Editar(null, [ortodoncia], [sur], Activos([ortodoncia], [sur]));
+
+            (await store.GuardarAsync(ficha, token)).ShouldBe(ResultadoGuardadoProfesional.Guardado);
+
+            await using var verify = CreateContext(path);
+            var guardada = await new EfProfesionales(verify).BuscarPorCuentaAsync(cuenta, token);
+
+            guardada.ShouldNotBeNull();
+            guardada.EspecialidadIds.ShouldBe([ortodoncia]);
+            guardada.LocalIds.ShouldBe([sur]);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
     public async Task Migration_creates_and_removes_the_write_guard_triggers()
     {
         var path = Path.GetTempFileName();
@@ -797,6 +1199,20 @@ public sealed class ProfesionalesPersistenceTests
             await using var database = CreateContext(path);
             var token = TestContext.Current.CancellationToken;
             await database.Database.MigrateAsync(token);
+
+            (await ReadProfesionalTriggersAsync(database, token)).ShouldBe(
+                [
+                    "Profesional_Activar",
+                    "Profesional_Especialidad_Asignar",
+                    "Profesional_Especialidad_Borrar",
+                    "Profesional_Local_Asignar",
+                    "Profesional_Local_Borrar",
+                ],
+                ignoreOrder: true);
+
+            // El Down de la migración de borrado retira sus dos triggers y conserva los tres
+            // que crea ProfesionalReglasDeEscritura.
+            await database.GetService<IMigrator>().MigrateAsync("20261123212530_CorreoUnico", token);
 
             (await ReadProfesionalTriggersAsync(database, token)).ShouldBe(
                 ["Profesional_Activar", "Profesional_Especialidad_Asignar", "Profesional_Local_Asignar"],

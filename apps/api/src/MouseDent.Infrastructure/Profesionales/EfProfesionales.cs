@@ -1,5 +1,6 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using MouseDent.Domain.Profesionales;
 using MouseDent.Infrastructure.Persistence;
 
@@ -18,8 +19,9 @@ public sealed class EfProfesionales(MouseDentDbContext database) : IProfesionale
 {
     // Textos que produce la base y únicos que conoce este archivo. Los índices viven en
     // la migración 20261123194253_Profesional y los triggers en
-    // 20261123201958_ProfesionalReglasDeEscritura; SQLite devuelve su nombre o su mensaje
-    // dentro del error de restricción. Al cambiar una migración hay que cambiar su constante.
+    // 20261123201958_ProfesionalReglasDeEscritura y 20261124040050_ProfesionalBorradoGuardado;
+    // SQLite devuelve su nombre o su mensaje dentro del error de restricción. Al cambiar
+    // una migración hay que cambiar su constante.
     private const string IndiceColegiaturaUnica = "Profesionales.ColegiaturaNormalizada";
     private const string IndiceCuentaUnica = "Profesionales.StaffAccountId";
     private const string TriggerEspecialidadInactiva = "profesional_especialidad_inactiva";
@@ -41,19 +43,6 @@ public sealed class EfProfesionales(MouseDentDbContext database) : IProfesionale
         return guardado is null ? null : AFicha(guardado);
     }
 
-    public Task<bool> ColegiaturaEstaTomadaAsync(
-        string colegiaturaNormalizada,
-        Guid? excluirProfesionalId,
-        CancellationToken cancellationToken) =>
-        excluirProfesionalId is null
-            ? database.Profesionales.AnyAsync(
-                ficha => ficha.ColegiaturaNormalizada == colegiaturaNormalizada,
-                cancellationToken)
-            : database.Profesionales.AnyAsync(
-                ficha => ficha.ColegiaturaNormalizada == colegiaturaNormalizada
-                    && ficha.Id != excluirProfesionalId.Value,
-                cancellationToken);
-
     public async Task<ResultadoGuardadoProfesional> GuardarAsync(
         Profesional profesional,
         CancellationToken cancellationToken)
@@ -63,6 +52,7 @@ public sealed class EfProfesionales(MouseDentDbContext database) : IProfesionale
         var guardado = await database.Profesionales
             .Include(ficha => ficha.Especialidades)
             .Include(ficha => ficha.Locales)
+            .AsSplitQuery()
             .SingleOrDefaultAsync(ficha => ficha.Id == profesional.Id, cancellationToken);
 
         if (guardado is null)
@@ -79,14 +69,54 @@ public sealed class EfProfesionales(MouseDentDbContext database) : IProfesionale
         SincronizarEspecialidades(guardado, profesional.EspecialidadIds);
         SincronizarLocales(guardado, profesional.LocalIds);
 
+        // Los triggers de borrado comprueban la ficha y sus asignaciones en el instante del
+        // DELETE. EF escribe los borrados antes que las altas de la misma tabla, así que
+        // cambiar la única especialidad activa por otra activa parecería un borrado que deja
+        // la ficha sin mínimo. Se escriben primero las altas y los cambios de la ficha y
+        // después los borrados, dentro de una sola transacción: el orden es el que esperan
+        // los triggers y una operación rechazada no deja cambios parciales.
+        var retiradas = database.ChangeTracker.Entries()
+            .Where(entry => entry.State == EntityState.Deleted
+                && entry.Entity is ProfesionalEspecialidad or ProfesionalLocal)
+            .Select(entry => entry.Entity)
+            .ToArray();
+
+        IDbContextTransaction? propia = null;
         try
         {
+            foreach (var retirada in retiradas)
+            {
+                database.Entry(retirada).State = EntityState.Detached;
+            }
+
+            if (retiradas.Length > 0 && database.Database.CurrentTransaction is null)
+            {
+                propia = await database.Database.BeginTransactionAsync(cancellationToken);
+            }
+
             await database.SaveChangesAsync(cancellationToken);
+
+            if (retiradas.Length > 0)
+            {
+                database.RemoveRange(retiradas);
+                await database.SaveChangesAsync(cancellationToken);
+            }
+
+            if (propia is not null)
+            {
+                await propia.CommitAsync(cancellationToken);
+            }
+
             return ResultadoGuardadoProfesional.Guardado;
         }
         catch (DbUpdateException exception)
         {
             Rechazar(guardado);
+
+            if (propia is not null)
+            {
+                await propia.RollbackAsync(cancellationToken);
+            }
 
             if (EsRestriccion(exception, IndiceColegiaturaUnica))
             {
@@ -115,13 +145,26 @@ public sealed class EfProfesionales(MouseDentDbContext database) : IProfesionale
 
             throw;
         }
+        finally
+        {
+            if (propia is not null)
+            {
+                await propia.DisposeAsync();
+            }
+        }
     }
 
+    /// <summary>
+    /// Lectura de la ficha con sus dos colecciones. Se separa en varias consultas
+    /// (<c>AsSplitQuery</c>) para no multiplicar las filas por el producto cartesiano
+    /// de especialidades y locales, que además dispara el aviso 20504 de EF Core.
+    /// </summary>
     private IQueryable<ProfesionalGuardado> Fichas() =>
         database.Profesionales
             .AsNoTracking()
             .Include(ficha => ficha.Especialidades)
-            .Include(ficha => ficha.Locales);
+            .Include(ficha => ficha.Locales)
+            .AsSplitQuery();
 
     private static Profesional AFicha(ProfesionalGuardado guardado) =>
         Profesional.Restaurar(

@@ -18,17 +18,9 @@ public interface IProfesionales
     Task<Profesional?> BuscarPorCuentaAsync(Guid staffAccountId, CancellationToken cancellationToken);
 
     /// <summary>
-    /// Comprobación amable antes de escribir. La garantía definitiva es el índice
-    /// único, que incluye las fichas inactivas.
-    /// </summary>
-    Task<bool> ColegiaturaEstaTomadaAsync(
-        string colegiaturaNormalizada,
-        Guid? excluirProfesionalId,
-        CancellationToken cancellationToken);
-
-    /// <summary>
     /// Inserta o actualiza la ficha y sus asignaciones en una sola operación. Un
-    /// rechazo no deja cambios y devuelve el motivo.
+    /// rechazo no deja cambios y devuelve el motivo. La unicidad de la colegiatura
+    /// la garantiza el índice único, no una comprobación previa.
     /// </summary>
     Task<ResultadoGuardadoProfesional> GuardarAsync(
         Profesional profesional,

@@ -72,13 +72,6 @@ internal sealed class FakeProfesionales(params Profesional[] stored) : IProfesio
             ? Leer(ficha)
             : null);
 
-    public Task<bool> ColegiaturaEstaTomadaAsync(
-        string colegiaturaNormalizada,
-        Guid? excluirProfesionalId,
-        CancellationToken cancellationToken) =>
-        Task.FromResult(_fichas.Any(ficha =>
-            ficha.ColegiaturaNormalizada == colegiaturaNormalizada && ficha.Id != excluirProfesionalId));
-
     public Task<ResultadoGuardadoProfesional> GuardarAsync(
         Profesional profesional,
         CancellationToken cancellationToken)
