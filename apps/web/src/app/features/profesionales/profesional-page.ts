@@ -411,14 +411,14 @@ export class ProfesionalPage {
 
   protected invitationCopy(profesional: ProfesionalResponse): string {
     if (profesional.invitationFailed) {
-      return 'La ficha y la cuenta quedaron creadas. Reenvía la invitación para que la persona cree su contraseña.';
+      return 'La cuenta sigue pendiente y el último envío de la invitación falló. Puedes reintentarlo desde esta ficha.';
     }
 
     if (this.resentId() === profesional.id) {
       return 'La invitación se reenvió. La cuenta seguirá pendiente hasta que la persona cree su contraseña.';
     }
 
-    return 'La cuenta aún no tiene contraseña. La persona debe abrir el enlace del correo para crearla.';
+    return 'La cuenta queda pendiente de que la persona establezca su contraseña. Si no recibió la invitación, puedes reenviarla desde esta ficha.';
   }
 
   /** Una asignación conservada que hoy está inactiva se explica aunque haya otras activas. */
@@ -729,6 +729,6 @@ function saveNotice(draft: ProfesionalDraft, saved: ProfesionalResponse): string
     case 'Inactiva':
       return 'Cuenta vinculada. El acceso está inactivo y se gestiona en Personal.';
     default:
-      return 'Ficha creada. La cuenta queda pendiente hasta que la persona establezca su contraseña con la invitación.';
+      return 'Ficha creada. La cuenta queda pendiente hasta que la persona establezca su contraseña.';
   }
 }

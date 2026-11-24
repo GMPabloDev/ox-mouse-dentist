@@ -480,6 +480,43 @@ describe('ProfesionalPage', () => {
     expect(text(fixture)).not.toContain('Invitación pendiente');
   });
 
+  it('vincula una cuenta pendiente sin afirmar que la invitación se envió', async () => {
+    const vinculada = profesional({
+      id: 'ficha-pendiente',
+      displayName: 'Jorge Salas',
+      email: 'jorge.salas@example.test',
+      phone: null,
+      colegiatura: null,
+      accountStatus: 'Pendiente',
+      invitationFailed: false,
+    });
+    const api = profesionalesApi({
+      create: vi.fn(async () => ({ ok: true as const, value: vinculada })),
+    });
+    const fixture = await render(api);
+
+    openCreate(fixture);
+    await flush(fixture);
+
+    setInput(fixture, '#profesional-name', 'Nombre escrito en el alta');
+    setInput(fixture, '#profesional-email', 'jorge.salas@example.test');
+    setChecked(fixture, 'input[name="especialidad"][value="general"]', true);
+    setChecked(fixture, 'input[name="local"][value="miraflores"]', true);
+    button(fixture, 'Crear y enviar invitación').click();
+    await flush(fixture);
+
+    // El vínculo no envía correo: el aviso no puede afirmar que la invitación salió
+    // ni pedir que la persona abra un enlace que quizá no recibió.
+    expect(text(fixture)).toContain('Ficha creada. La cuenta queda pendiente');
+    expect(text(fixture)).not.toContain('con la invitación');
+    expect(panel(fixture)?.textContent).toContain('Invitación pendiente');
+    expect(panel(fixture)?.textContent).toContain(
+      'La cuenta queda pendiente de que la persona establezca su contraseña. Si no recibió la invitación, puedes reenviarla desde esta ficha.',
+    );
+    expect(panel(fixture)?.textContent).not.toContain('La persona debe abrir el enlace del correo');
+    expect(hasButton(fixture, 'Reenviar invitación')).toBe(true);
+  });
+
   it('avisa posibles homónimos al crear sin bloquear el guardado', async () => {
     const creada = profesional({
       id: 'ficha-nueva',
@@ -713,7 +750,9 @@ describe('ProfesionalPage', () => {
     );
     expect(panel(fixture)?.textContent).not.toContain('La operación no se completó');
     expect(text(fixture)).not.toContain('La ficha y la cuenta del profesional quedaron guardadas');
-    expect(text(fixture).match(/La ficha y la cuenta quedaron creadas/g) ?? []).toHaveLength(1);
+    expect(text(fixture).match(/La cuenta sigue pendiente y el último envío/g) ?? []).toHaveLength(
+      1,
+    );
     expect(text(fixture)).toContain('1 correo sin enviar');
     expect(text(fixture)).not.toContain('Ficha creada.');
     expect(hasButton(fixture, 'Reintentar envío')).toBe(true);
@@ -861,6 +900,43 @@ describe('ProfesionalPage', () => {
     ).toBe(true);
     expect(text(fixture)).toContain('Inactiva');
     expect(text(fixture)).toContain('Inactivo');
+  });
+
+  it('abre la edición con el bloque de cuenta en solo lectura y el acceso a Personal', async () => {
+    const api = profesionalesApi({
+      list: vi.fn(async () => ({ ok: true as const, value: [VALERIA] })),
+    });
+    const fixture = await render(api);
+
+    personButton(fixture, 'Valeria Torres').click();
+    await flush(fixture);
+    button(fixture, 'Editar ficha').click();
+    await flush(fixture);
+
+    const editor = panel(fixture);
+    expect(editor).not.toBeNull();
+    expect(editor!.textContent).toContain('Editar ficha de Valeria Torres');
+    expect(editor!.textContent).toContain('Cuenta vinculada');
+
+    // Los datos de la cuenta se ven, pero no hay controles para cambiarlos desde la ficha.
+    expect(editor!.textContent).toContain('Valeria Torres');
+    expect(editor!.textContent).toContain('valeria.torres@example.test');
+    expect(editor!.textContent).toContain('987 123 456');
+    expect(editor!.querySelector('#profesional-name')).toBeNull();
+    expect(editor!.querySelector('#profesional-email')).toBeNull();
+    expect(editor!.querySelector('input[name="displayName"]')).toBeNull();
+    expect(editor!.querySelector('input[name="email"]')).toBeNull();
+    expect(editor!.querySelector('input[name="phone"]')).toBeNull();
+    expect(editor!.querySelector('input[type="email"]')).toBeNull();
+    expect(editor!.querySelector('input[autocomplete="tel"]')).toBeNull();
+
+    // El único campo editable de la sección es la colegiatura y la cuenta se cambia en Personal.
+    expect(editor!.querySelector<HTMLInputElement>('#profesional-colegiatura')?.value).toBe(
+      'COP 12345',
+    );
+    expect(editor!.querySelector('a[href="/personal"]')?.textContent).toContain(
+      'Abrir en Personal',
+    );
   });
 
   it('conserva lo escrito cuando falla la edición', async () => {

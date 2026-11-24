@@ -352,8 +352,11 @@ describe('StaffPage', () => {
     await flush(fixture);
 
     expect(host(fixture).querySelectorAll('input[name="profile"]').length).toBe(0);
-    expect(text(fixture)).toContain('Perfil Profesional asignado en profesionales');
-    expect(text(fixture)).toContain('se asigna en el alta de profesionales');
+    expect(text(fixture)).toContain('Perfil Profesional');
+    expect(text(fixture)).toContain('Esta pantalla no cambia el perfil de una cuenta Profesional');
+    expect(text(fixture)).toContain(
+      'si la cuenta ya tiene ficha, la API tampoco permite cambiarlo',
+    );
 
     setInput(fixture, '#staff-name', 'Andrea Quispe Ríos');
     setInput(fixture, '#staff-phone', '987 654 321');

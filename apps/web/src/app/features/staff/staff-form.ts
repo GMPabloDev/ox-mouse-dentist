@@ -22,7 +22,6 @@ export const PROFILE_OPTIONS = [
  */
 export const PROFESSIONAL_PROFILE = {
   value: 'Profesional',
-  label: 'Profesional',
 } as const;
 
 /** Perfiles que puede tener una cuenta, incluido el que solo se muestra. */
@@ -104,7 +103,8 @@ export function canAssignLocal(draft: StaffDraft, local: StaffLocal): boolean {
  * El perfil `Profesional` se asigna en el alta de profesionales, así que aquí no se
  * ofrece el selector. El contrato de la cuenta no dice si tiene ficha: la interfaz
  * deduce el caso por el perfil, el único que puede tenerla, y por eso tampoco deja
- * cambiar el de una cuenta `Profesional` sin ficha. Editar sus datos sigue disponible.
+ * cambiar el de una cuenta `Profesional` sin ficha, que la API todavía aceptaría.
+ * Editar sus datos sigue disponible y el aviso del formulario explica ambos casos.
  */
 export function profileIsEditable(draft: StaffDraft): boolean {
   return draft.id === null || draft.profile !== PROFESSIONAL_PROFILE.value;
