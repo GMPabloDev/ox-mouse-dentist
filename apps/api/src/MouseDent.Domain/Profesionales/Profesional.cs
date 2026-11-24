@@ -41,7 +41,9 @@ public sealed class Profesional
 
     /// <summary>
     /// Crea una ficha activa. Exige una cuenta, una especialidad activa y un local
-    /// activo, y no admite asignar especialidades ni locales inactivos.
+    /// activo, y no admite asignar especialidades ni locales inactivos. Se valida con
+    /// la misma regla que la edición de una ficha activa, partiendo de asignaciones
+    /// actuales vacías.
     /// </summary>
     public static Profesional Crear(
         Guid staffAccountId,
@@ -55,8 +57,21 @@ public sealed class Profesional
             throw new ArgumentException("La ficha necesita una cuenta.", nameof(staffAccountId));
         }
 
+        ArgumentNullException.ThrowIfNull(activos);
+
+        var especialidades = PrepararAsignaciones(especialidadIds, nameof(especialidadIds));
+        var locales = PrepararAsignaciones(localIds, nameof(localIds));
+
+        LanzarSiRechazada(ReglaDeAsignaciones.Evaluar(
+            especialidades,
+            locales,
+            [],
+            [],
+            fichaActiva: true,
+            activos));
+
         var ficha = new Profesional { Id = Guid.NewGuid(), StaffAccountId = staffAccountId };
-        ficha.Editar(colegiatura, especialidadIds, localIds, activos);
+        ficha.Editar(colegiatura, especialidades, locales, activos);
         ficha.Activar(activos);
 
         return ficha;
@@ -84,24 +99,13 @@ public sealed class Profesional
 
         // Se comprueban las asignaciones nuevas y el mínimo de la ficha activa antes de
         // tocar el estado para que un rechazo no deje cambios parciales.
-        if (especialidades.Any(id => !_especialidadIds.Contains(id) && !activos.EsEspecialidadActiva(id)))
-        {
-            throw new InvalidOperationException("No se puede asignar una especialidad inactiva.");
-        }
-
-        if (locales.Any(id => !_localIds.Contains(id) && !activos.EsLocalActivo(id)))
-        {
-            throw new InvalidOperationException("No se puede añadir un local de atención inactivo.");
-        }
-
-        // Una ficha activa mantiene el mínimo con el que se activó. Para vaciarla se
-        // desactiva antes. Una ficha inactiva sí puede quedarse sin asignaciones activas.
-        if (IsActive
-            && (!especialidades.Any(activos.EsEspecialidadActiva) || !locales.Any(activos.EsLocalActivo)))
-        {
-            throw new InvalidOperationException(
-                "Una ficha activa necesita al menos una especialidad activa y un local de atención activo.");
-        }
+        LanzarSiRechazada(ReglaDeAsignaciones.Evaluar(
+            especialidades,
+            locales,
+            _especialidadIds,
+            _localIds,
+            IsActive,
+            activos));
 
         Colegiatura = numero?.Visible;
         ColegiaturaNormalizada = numero?.Normalizada;
@@ -186,5 +190,28 @@ public sealed class Profesional
         }
 
         return asignaciones;
+    }
+
+    /// <summary>
+    /// Traduce el rechazo de la regla compartida a la excepción de la entidad. La
+    /// aplicación ya la consultó para devolver el motivo por campo; este lanzamiento
+    /// es la última defensa del dominio.
+    /// </summary>
+    private static void LanzarSiRechazada(RechazoDeAsignaciones rechazo)
+    {
+        switch (rechazo)
+        {
+            case RechazoDeAsignaciones.EspecialidadInactiva:
+                throw new InvalidOperationException("No se puede asignar una especialidad inactiva.");
+            case RechazoDeAsignaciones.LocalInactivo:
+                throw new InvalidOperationException("No se puede añadir un local de atención inactivo.");
+            case RechazoDeAsignaciones.ActivacionIncompleta:
+                throw new InvalidOperationException(
+                    "Una ficha activa necesita al menos una especialidad activa y un local de atención activo.");
+            case RechazoDeAsignaciones.Ninguno:
+                return;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(rechazo), rechazo, "Motivo sin traducción.");
+        }
     }
 }

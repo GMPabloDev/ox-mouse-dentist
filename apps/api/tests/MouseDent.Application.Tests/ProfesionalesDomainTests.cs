@@ -322,6 +322,42 @@ public sealed class ProfesionalesDomainTests
         ficha.Colegiatura.ShouldBe("COP 9");
     }
 
+    [Fact]
+    public void Creation_and_active_edition_apply_the_same_assignment_rule()
+    {
+        var activa = Guid.NewGuid();
+        var inactiva = Guid.NewGuid();
+        var localActivo = Guid.NewGuid();
+        var activos = Activos([activa], [localActivo]);
+
+        // Un destino inactivo se rechaza con el mismo motivo en ambas entradas y antes
+        // que el mínimo, porque la regla es una sola.
+        var creacion = Should.Throw<InvalidOperationException>(() => Profesional.Crear(
+            Guid.NewGuid(),
+            null,
+            [activa, inactiva],
+            [localActivo],
+            activos));
+        var ficha = Profesional.Crear(Guid.NewGuid(), null, [activa], [localActivo], activos);
+        var edicion = Should.Throw<InvalidOperationException>(() =>
+            ficha.Editar(null, [activa, inactiva], [localActivo], activos));
+
+        edicion.Message.ShouldBe(creacion.Message);
+        creacion.Message.ShouldBe("No se puede asignar una especialidad inactiva.");
+
+        // El mínimo de una ficha activa también coincide en ambas entradas.
+        var minimoCreacion = Should.Throw<InvalidOperationException>(() => Profesional.Crear(
+            Guid.NewGuid(),
+            null,
+            [activa],
+            [],
+            Activos([activa], [])));
+        var minimoEdicion = Should.Throw<InvalidOperationException>(() =>
+            ficha.Editar(null, [activa], [], Activos([activa], [])));
+
+        minimoEdicion.Message.ShouldBe(minimoCreacion.Message);
+    }
+
     private static CatalogoActivo Activos(IEnumerable<Guid> especialidades, IEnumerable<Guid> locales) =>
         new(especialidades, locales);
 }

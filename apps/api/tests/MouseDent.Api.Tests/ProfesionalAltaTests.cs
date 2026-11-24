@@ -330,7 +330,7 @@ public sealed class ProfesionalAltaTests(MouseDentApiFactory factory) : IClassFi
             MouseDentApiFactory.AdminPassword);
         using var update = await StaffTestHelpers.UpdateStaffAsync(
             admin,
-            second.Account!.Id,
+            second.Ficha!.StaffAccountId,
             newEmail,
             StaffRole.Professional);
         update.StatusCode.ShouldBe(HttpStatusCode.OK);
@@ -384,7 +384,7 @@ public sealed class ProfesionalAltaTests(MouseDentApiFactory factory) : IClassFi
         var pendingSummary = (await ListAsync(new ProfesionalFiltro { Search = pendingEmail }))
             .ShouldHaveSingleItem();
         pendingSummary.Id.ShouldBe(pendingFicha.Id);
-        pendingSummary.StaffAccountId.ShouldBe(pending.Account!.Id);
+        pendingSummary.StaffAccountId.ShouldBe(pending.Ficha!.StaffAccountId);
         pendingSummary.DisplayName.ShouldBe("Profesional de pruebas");
         pendingSummary.Email.ShouldBe(pendingEmail);
         pendingSummary.Phone.ShouldBeNull();

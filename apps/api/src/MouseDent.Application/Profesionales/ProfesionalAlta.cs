@@ -1,4 +1,3 @@
-using MouseDent.Domain.Auth;
 using MouseDent.Domain.Profesionales;
 
 namespace MouseDent.Application.Profesionales;
@@ -53,34 +52,27 @@ public enum ProfesionalAltaStatus
 }
 
 /// <summary>
-/// Resultado del alta. <see cref="Ficha"/> y <see cref="Account"/> solo están
-/// presentes cuando la ficha quedó guardada, incluso si la invitación falló; todo
-/// rechazo deja la base como estaba.
+/// Resultado del alta. <see cref="Ficha"/> solo está presente cuando la ficha quedó
+/// guardada, incluso si la invitación falló; todo rechazo deja la base como estaba.
 /// </summary>
 public sealed record ProfesionalAltaOutcome
 {
-    private ProfesionalAltaOutcome(
-        ProfesionalAltaStatus status,
-        Profesional? ficha,
-        StaffAccount? account)
+    private ProfesionalAltaOutcome(ProfesionalAltaStatus status, Profesional? ficha)
     {
         Status = status;
         Ficha = ficha;
-        Account = account;
     }
 
     public ProfesionalAltaStatus Status { get; }
 
     public Profesional? Ficha { get; }
 
-    public StaffAccount? Account { get; }
-
-    public static ProfesionalAltaOutcome Saved(Profesional ficha, StaffAccount account) =>
-        new(ProfesionalAltaStatus.Saved, ficha, account);
+    public static ProfesionalAltaOutcome Saved(Profesional ficha) =>
+        new(ProfesionalAltaStatus.Saved, ficha);
 
     /// <summary>La ficha y la cuenta quedaron guardadas; el correo no se entregó.</summary>
-    public static ProfesionalAltaOutcome InvitationFailed(Profesional ficha, StaffAccount account) =>
-        new(ProfesionalAltaStatus.InvitationFailed, ficha, account);
+    public static ProfesionalAltaOutcome InvitationFailed(Profesional ficha) =>
+        new(ProfesionalAltaStatus.InvitationFailed, ficha);
 
-    public static ProfesionalAltaOutcome Failed(ProfesionalAltaStatus status) => new(status, null, null);
+    public static ProfesionalAltaOutcome Failed(ProfesionalAltaStatus status) => new(status, null);
 }

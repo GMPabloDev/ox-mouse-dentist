@@ -76,7 +76,6 @@ public sealed class ProfesionalManagementServiceTests
 
         outcome.Status.ShouldBe(ProfesionalAltaStatus.InvitationFailed);
         outcome.Ficha.ShouldNotBeNull();
-        outcome.Account.ShouldNotBeNull();
         var (account, _) = altas.Created.ShouldHaveSingleItem();
         var (accountId, failedAt) = accounts.InvitationFailures.ShouldHaveSingleItem();
 

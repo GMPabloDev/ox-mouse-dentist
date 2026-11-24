@@ -60,24 +60,20 @@ public sealed class ProfesionalManagementService(
         var especialidadIds = command.EspecialidadIds.Distinct().ToArray();
         var localIds = command.LocalIds.Distinct().ToArray();
 
-        // Un destino nuevo debe existir y estar activo. Una asignación que ya tenía la
-        // ficha se conserva aunque el catálogo o el local se hayan desactivado después.
-        if (especialidadIds.Any(id => !ficha.EspecialidadIds.Contains(id) && !active.EsEspecialidadActiva(id)))
-        {
-            return ProfesionalEdicionOutcome.Rejected(ProfesionalEdicionStatus.EspecialidadInactiva);
-        }
+        // La regla compartida con el dominio decide con el estado persistido de la ficha y
+        // del catálogo. Así la aplicación devuelve el motivo por campo y la entidad solo
+        // lanza si la comprobación y la escritura ven estados distintos.
+        var rechazo = ReglaDeAsignaciones.Evaluar(
+            especialidadIds,
+            localIds,
+            ficha.EspecialidadIds,
+            ficha.LocalIds,
+            ficha.IsActive,
+            active);
 
-        if (localIds.Any(id => !ficha.LocalIds.Contains(id) && !active.EsLocalActivo(id)))
+        if (rechazo is not RechazoDeAsignaciones.Ninguno)
         {
-            return ProfesionalEdicionOutcome.Rejected(ProfesionalEdicionStatus.LocalInactivo);
-        }
-
-        // La ficha activa mantiene el mínimo con el que se activó. Una ficha inactiva se
-        // edita con asignaciones inactivas y se reactiva cuando recupere activas.
-        if (ficha.IsActive
-            && (!especialidadIds.Any(active.EsEspecialidadActiva) || !localIds.Any(active.EsLocalActivo)))
-        {
-            return ProfesionalEdicionOutcome.Rejected(ProfesionalEdicionStatus.ActivacionIncompleta);
+            return ProfesionalEdicionOutcome.Rejected(ToEdicionStatus(rechazo));
         }
 
         ficha.Editar(command.Colegiatura, especialidadIds, localIds, active);
@@ -145,10 +141,19 @@ public sealed class ProfesionalManagementService(
         var especialidadIds = command.EspecialidadIds.Distinct().ToArray();
         var localIds = command.LocalIds.Distinct().ToArray();
 
-        var rejection = ValidateAssignments(especialidadIds, localIds, active);
-        if (rejection is { } rejected)
+        // La ficha nace activa y sin asignaciones actuales que conservar, así que la regla
+        // es la misma que la de una edición activa.
+        var rechazo = ReglaDeAsignaciones.Evaluar(
+            especialidadIds,
+            localIds,
+            [],
+            [],
+            fichaActiva: true,
+            active);
+
+        if (rechazo is not RechazoDeAsignaciones.Ninguno)
         {
-            return ProfesionalAltaOutcome.Failed(rejected);
+            return ProfesionalAltaOutcome.Failed(ToAltaStatus(rechazo));
         }
 
         var email = command.Email.Trim();
@@ -223,8 +228,8 @@ public sealed class ProfesionalManagementService(
         // La cuenta y la ficha ya existen: si el correo falla se conserva el alta y
         // administración puede reenviar la invitación desde la ficha.
         return await access.SendInvitationAsync(account, cancellationToken)
-            ? ProfesionalAltaOutcome.Saved(ficha, account)
-            : ProfesionalAltaOutcome.InvitationFailed(ficha, account);
+            ? ProfesionalAltaOutcome.Saved(ficha)
+            : ProfesionalAltaOutcome.InvitationFailed(ficha);
     }
 
     private async Task<ProfesionalAltaOutcome> LinkAccountAsync(
@@ -252,33 +257,8 @@ public sealed class ProfesionalManagementService(
         var result = await altas.VincularCuentaAsync(ficha, cancellationToken);
 
         return result is ResultadoEscrituraAlta.Guardado
-            ? ProfesionalAltaOutcome.Saved(ficha, account)
+            ? ProfesionalAltaOutcome.Saved(ficha)
             : ProfesionalAltaOutcome.Failed(ToStatus(result));
-    }
-
-    /// <summary>
-    /// Comprueba las asignaciones con el catálogo y los locales del momento. Solo se
-    /// asignan especialidades y locales activos, y la ficha nace activa, así que
-    /// necesita al menos uno de cada uno. La ficha y la base repiten la regla.
-    /// </summary>
-    private static ProfesionalAltaStatus? ValidateAssignments(
-        Guid[] especialidadIds,
-        Guid[] localIds,
-        CatalogoActivo active)
-    {
-        if (especialidadIds.Any(id => !active.EsEspecialidadActiva(id)))
-        {
-            return ProfesionalAltaStatus.EspecialidadInactiva;
-        }
-
-        if (localIds.Any(id => !active.EsLocalActivo(id)))
-        {
-            return ProfesionalAltaStatus.LocalInactivo;
-        }
-
-        return !especialidadIds.Any(active.EsEspecialidadActiva) || !localIds.Any(active.EsLocalActivo)
-            ? ProfesionalAltaStatus.ActivacionIncompleta
-            : null;
     }
 
     private async Task<CatalogoActivo> ActiveCatalogAsync(CancellationToken cancellationToken)
@@ -290,6 +270,24 @@ public sealed class ProfesionalManagementService(
             especialidades.Where(especialidad => especialidad.IsActive).Select(especialidad => especialidad.Id),
             localesGuardados.Where(local => local.IsActive).Select(local => local.Id));
     }
+
+    /// <summary>Traduce el rechazo de la regla al motivo de la edición.</summary>
+    private static ProfesionalEdicionStatus ToEdicionStatus(RechazoDeAsignaciones rechazo) => rechazo switch
+    {
+        RechazoDeAsignaciones.EspecialidadInactiva => ProfesionalEdicionStatus.EspecialidadInactiva,
+        RechazoDeAsignaciones.LocalInactivo => ProfesionalEdicionStatus.LocalInactivo,
+        RechazoDeAsignaciones.ActivacionIncompleta => ProfesionalEdicionStatus.ActivacionIncompleta,
+        _ => throw new InvalidOperationException("La regla de asignaciones no rechazó la edición."),
+    };
+
+    /// <summary>Traduce el rechazo de la regla al motivo del alta.</summary>
+    private static ProfesionalAltaStatus ToAltaStatus(RechazoDeAsignaciones rechazo) => rechazo switch
+    {
+        RechazoDeAsignaciones.EspecialidadInactiva => ProfesionalAltaStatus.EspecialidadInactiva,
+        RechazoDeAsignaciones.LocalInactivo => ProfesionalAltaStatus.LocalInactivo,
+        RechazoDeAsignaciones.ActivacionIncompleta => ProfesionalAltaStatus.ActivacionIncompleta,
+        _ => throw new InvalidOperationException("La regla de asignaciones no rechazó el alta."),
+    };
 
     /// <summary>Traduce el rechazo de la escritura al motivo que ve administración.</summary>
     private static ProfesionalAltaStatus ToStatus(ResultadoEscrituraAlta result) => result switch
