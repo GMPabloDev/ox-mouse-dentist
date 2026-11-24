@@ -459,6 +459,8 @@ export const setServicioStatus = <ThrowOnError extends boolean = false>(
 
 /**
  * Lista las fichas de los profesionales con el estado de su cuenta y sus asignaciones.
+ *
+ * Los parámetros de búsqueda y de filtro quedan para consumidores directos del endpoint. La pantalla de administración carga la lista y filtra en memoria. La búsqueda usa LIKE de SQLite y no ignora tildes: «Lucia» no encuentra «Lucía».
  */
 export const listProfesionales = <ThrowOnError extends boolean = false>(
   options?: Options<ListProfesionalesData, ThrowOnError>,
@@ -475,6 +477,8 @@ export const listProfesionales = <ThrowOnError extends boolean = false>(
 
 /**
  * Crea la ficha con su cuenta pendiente y la invitación, o vincula una cuenta Profesional sin ficha.
+ *
+ * Errores del alta. La extensión code del ProblemDetails identifica el caso: colegiatura_duplicada, correo_con_ficha, correo_de_otra_cuenta, activacion_incompleta, alta_simultanea o cuenta_no_encontrada en el 409, e invitacion_sin_enviar en el 502, que además trae profesionalId.
  */
 export const createProfesional = <ThrowOnError extends boolean = false>(
   options: Options<CreateProfesionalData, ThrowOnError>,
@@ -507,6 +511,8 @@ export const getProfesional = <ThrowOnError extends boolean = false>(
 
 /**
  * Edita la colegiatura, las especialidades y los locales de la ficha; no cambia los datos de la cuenta.
+ *
+ * Errores de la edición. La extensión code del ProblemDetails identifica el caso: colegiatura_duplicada, correo_con_ficha, correo_de_otra_cuenta o activacion_incompleta.
  */
 export const updateProfesional = <ThrowOnError extends boolean = false>(
   options: Options<UpdateProfesionalData, ThrowOnError>,
@@ -525,6 +531,8 @@ export const updateProfesional = <ThrowOnError extends boolean = false>(
 
 /**
  * Activa o desactiva la ficha sin borrar sus especialidades, sus locales ni su cuenta.
+ *
+ * La ficha no recuperó el mínimo. La extensión code del ProblemDetails vale activacion_incompleta.
  */
 export const setProfesionalStatus = <ThrowOnError extends boolean = false>(
   options: Options<SetProfesionalStatusData, ThrowOnError>,
@@ -545,6 +553,8 @@ export const setProfesionalStatus = <ThrowOnError extends boolean = false>(
 
 /**
  * Reenvía la invitación pendiente de la cuenta del profesional.
+ *
+ * La cuenta no admite la invitación si está inactiva o ya estableció su contraseña. Si el enlace se emitió pero el correo no se entregó, el 502 trae la extensión code invitacion_sin_enviar y profesionalId.
  */
 export const resendProfesionalInvitation = <ThrowOnError extends boolean = false>(
   options: Options<ResendProfesionalInvitationData, ThrowOnError>,

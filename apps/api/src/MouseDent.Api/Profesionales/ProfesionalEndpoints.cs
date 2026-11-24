@@ -16,6 +16,12 @@ namespace MouseDent.Api.Profesionales;
 /// </summary>
 public static class ProfesionalEndpoints
 {
+    /// <summary>
+    /// Los dos formularios nombran igual el campo de colegiatura. Una sola constante
+    /// evita que el error de la edición dependa del formulario del alta.
+    /// </summary>
+    private const string ColegiaturaField = nameof(CreateProfesionalForm.Colegiatura);
+
     public static IEndpointRouteBuilder MapProfesionalEndpoints(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/profesionales")
@@ -25,6 +31,8 @@ public static class ProfesionalEndpoints
         group.MapGet("", ListAsync)
             .WithName("ListProfesionales")
             .WithSummary("Lista las fichas de los profesionales con el estado de su cuenta y sus asignaciones.")
+            .WithDescription(
+                "Los parámetros de búsqueda y de filtro quedan para consumidores directos del endpoint. La pantalla de administración carga la lista y filtra en memoria. La búsqueda usa LIKE de SQLite y no ignora tildes: «Lucia» no encuentra «Lucía».")
             .Produces<IReadOnlyList<ProfesionalResponse>>()
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status403Forbidden);
@@ -46,7 +54,9 @@ public static class ProfesionalEndpoints
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status409Conflict)
-            .ProducesProblem(StatusCodes.Status502BadGateway);
+            .ProducesProblem(StatusCodes.Status502BadGateway)
+            .WithDescription(
+                "Errores del alta. La extensión code del ProblemDetails identifica el caso: colegiatura_duplicada, correo_con_ficha, correo_de_otra_cuenta, activacion_incompleta, alta_simultanea o cuenta_no_encontrada en el 409, e invitacion_sin_enviar en el 502, que además trae profesionalId.");
 
         group.MapPut("/{id:guid}", UpdateAsync)
             .AddEndpointFilter<ValidationFilter<UpdateProfesionalForm>>()
@@ -57,7 +67,9 @@ public static class ProfesionalEndpoints
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
-            .ProducesProblem(StatusCodes.Status409Conflict);
+            .ProducesProblem(StatusCodes.Status409Conflict)
+            .WithDescription(
+                "Errores de la edición. La extensión code del ProblemDetails identifica el caso: colegiatura_duplicada, correo_con_ficha, correo_de_otra_cuenta o activacion_incompleta.");
 
         group.MapPatch("/{id:guid}/status", SetStatusAsync)
             .WithName("SetProfesionalStatus")
@@ -67,7 +79,9 @@ public static class ProfesionalEndpoints
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
-            .ProducesProblem(StatusCodes.Status409Conflict);
+            .ProducesProblem(StatusCodes.Status409Conflict)
+            .WithDescription(
+                "La ficha no recuperó el mínimo. La extensión code del ProblemDetails vale activacion_incompleta.");
 
         group.MapPost("/{id:guid}/invitation", ResendInvitationAsync)
             .WithName("ResendProfesionalInvitation")
@@ -77,7 +91,9 @@ public static class ProfesionalEndpoints
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict)
-            .ProducesProblem(StatusCodes.Status502BadGateway);
+            .ProducesProblem(StatusCodes.Status502BadGateway)
+            .WithDescription(
+                "La cuenta no admite la invitación si está inactiva o ya estableció su contraseña. Si el enlace se emitió pero el correo no se entregó, el 502 trae la extensión code invitacion_sin_enviar y profesionalId.");
 
         return app;
     }
@@ -274,7 +290,8 @@ public static class ProfesionalEndpoints
     private static ProblemHttpResult DuplicateColegiaturaProblem() => TypedResults.Problem(
         title: "Colegiatura duplicada",
         detail: "Otra ficha, incluso inactiva, ya tiene ese número de colegiatura.",
-        statusCode: StatusCodes.Status409Conflict);
+        statusCode: StatusCodes.Status409Conflict,
+        extensions: Code(ProfesionalErrorCodes.ColegiaturaDuplicada));
 
     /// <summary>
     /// El límite se valida en el formulario; esta respuesta cubre un valor que llegue
@@ -283,7 +300,7 @@ public static class ProfesionalEndpoints
     private static ValidationProblem InvalidColegiaturaProblem() => TypedResults.ValidationProblem(
         new Dictionary<string, string[]>
         {
-            [nameof(CreateProfesionalForm.Colegiatura)] =
+            [ColegiaturaField] =
             [
                 $"El número de colegiatura no puede superar los {DatosDeColegiatura.LongitudMaxima} caracteres.",
             ],
@@ -296,18 +313,21 @@ public static class ProfesionalEndpoints
     private static ProblemHttpResult WrongProfileProblem() => TypedResults.Problem(
         title: "Correo de otra cuenta",
         detail: "Ese correo pertenece a una cuenta de administración o recepción. El alta de profesionales solo vincula cuentas de perfil Profesional sin ficha.",
-        statusCode: StatusCodes.Status409Conflict);
+        statusCode: StatusCodes.Status409Conflict,
+        extensions: Code(ProfesionalErrorCodes.CorreoDeOtraCuenta));
 
     private static ProblemHttpResult AccountAlreadyLinkedProblem() => TypedResults.Problem(
         title: "Correo con ficha",
         detail: "Ese correo pertenece a una cuenta que ya tiene una ficha de profesional. Edita la ficha existente.",
-        statusCode: StatusCodes.Status409Conflict);
+        statusCode: StatusCodes.Status409Conflict,
+        extensions: Code(ProfesionalErrorCodes.CorreoConFicha));
 
     /// <summary>Otra alta simultánea tomó el correo entre la lectura y la escritura.</summary>
     private static ProblemHttpResult ConcurrentAltaProblem() => TypedResults.Problem(
         title: "Alta simultánea",
         detail: "Otra solicitud registró ese correo al mismo tiempo. Revisa la lista de profesionales y vuelve a intentarlo.",
-        statusCode: StatusCodes.Status409Conflict);
+        statusCode: StatusCodes.Status409Conflict,
+        extensions: Code(ProfesionalErrorCodes.AltaSimultanea));
 
     /// <summary>
     /// La cuenta a vincular desapareció entre la lectura y la escritura, así que el
@@ -317,7 +337,8 @@ public static class ProfesionalEndpoints
     private static ProblemHttpResult AccountNotFoundProblem() => TypedResults.Problem(
         title: "Cuenta no encontrada",
         detail: "La cuenta de ese correo dejó de existir entre la lectura y el guardado de la ficha. Revisa la lista de personal y vuelve a intentarlo.",
-        statusCode: StatusCodes.Status409Conflict);
+        statusCode: StatusCodes.Status409Conflict,
+        extensions: Code(ProfesionalErrorCodes.CuentaNoEncontrada));
 
     /// <summary>
     /// La ficha y la cuenta quedaron guardadas, pero el correo no salió. Se informa el
@@ -328,7 +349,11 @@ public static class ProfesionalEndpoints
         title: "Invitación sin enviar",
         detail: "La ficha y la cuenta del profesional quedaron guardadas, pero el correo con el enlace no se pudo enviar. Revisa la configuración del correo y vuelve a enviar la invitación desde la ficha.",
         statusCode: StatusCodes.Status502BadGateway,
-        extensions: new Dictionary<string, object?> { ["profesionalId"] = profesionalId });
+        extensions: new Dictionary<string, object?>
+        {
+            ["code"] = ProfesionalErrorCodes.InvitacionSinEnviar,
+            ["profesionalId"] = profesionalId,
+        });
 
     private static ProblemHttpResult AccountInactiveProblem() => TypedResults.Problem(
         title: "Cuenta inactiva",
@@ -344,7 +369,8 @@ public static class ProfesionalEndpoints
     private static ProblemHttpResult ActivationIncompleteProblem() => TypedResults.Problem(
         title: "Activación incompleta",
         detail: "La ficha necesita al menos una especialidad activa y un local de atención activo. Asigna una especialidad y un local activos antes de reactivarla.",
-        statusCode: StatusCodes.Status409Conflict);
+        statusCode: StatusCodes.Status409Conflict,
+        extensions: Code(ProfesionalErrorCodes.ActivacionIncompleta));
 
     /// <summary>
     /// Traduce una asignación rechazada al campo que administración debe corregir. El
@@ -402,4 +428,7 @@ public static class ProfesionalEndpoints
 
     private static ValidationProblem SingleFieldProblem(string campo, string mensaje) =>
         TypedResults.ValidationProblem(new Dictionary<string, string[]> { [campo] = [mensaje] });
+
+    /// <summary>Extensión estable que la web usa para clasificar el conflicto.</summary>
+    private static Dictionary<string, object?> Code(string code) => new() { ["code"] = code };
 }

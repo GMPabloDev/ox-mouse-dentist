@@ -12,6 +12,11 @@ namespace MouseDent.Infrastructure.Profesionales;
 /// catálogo y del local. El estado de la cuenta se deriva de su habilitación y de la
 /// contraseña establecida, y la marca de invitación fallida solo se informa mientras
 /// la cuenta siga pendiente.
+///
+/// La búsqueda de este modelo usa <c>LIKE</c> de SQLite y no ignora las tildes. La
+/// pantalla de administración no usa ese parámetro: filtra en memoria la lista
+/// cargada, con una comparación que sí las ignora. Los parámetros del endpoint quedan
+/// para consumidores directos y su semántica es la de SQLite.
 /// </summary>
 public sealed class EfListadoDeProfesionales(MouseDentDbContext database) : IListadoDeProfesionales
 {

@@ -29,11 +29,18 @@ public sealed record ProfesionalResumenLocal(Guid Id, string Name, bool IsActive
 
 /// <summary>
 /// Filtros del listado. Todos son opcionales y se combinan. El estado de la ficha y
-/// el estado de la cuenta son independientes, igual que en la ficha.
+/// el estado de la cuenta son independientes, igual que en la ficha. Los parámetros
+/// existen para consumidores directos del endpoint; la pantalla de administración
+/// carga la lista y aplica su propia búsqueda y sus filtros en memoria, incluida una
+/// comparación que ignora tildes.
 /// </summary>
 public sealed record ProfesionalFiltro
 {
-    /// <summary>Nombre o correo. Nulo o vacío devuelve todas las fichas.</summary>
+    /// <summary>
+    /// Nombre o correo de la cuenta. Nulo o vacío devuelve todas las fichas. Se
+    /// resuelve con <c>LIKE</c> de SQLite, que no ignora las tildes: «Lucia» no
+    /// encuentra «Lucía» y «Ortodoncia» no encuentra «Ortodoncía».
+    /// </summary>
     public string? Search { get; init; }
 
     public Guid? EspecialidadId { get; init; }

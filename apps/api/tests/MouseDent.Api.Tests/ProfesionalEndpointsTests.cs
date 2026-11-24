@@ -417,7 +417,9 @@ public sealed class ProfesionalEndpointsTests(MouseDentApiFactory factory) : ICl
             colegiatura.ToLowerInvariant());
 
         response.StatusCode.ShouldBe(HttpStatusCode.Conflict);
-        (await ReadProblemAsync(response)).Title.ShouldBe("Colegiatura duplicada");
+        var colegiaturaDuplicada = await ReadProblemAsync(response);
+        colegiaturaDuplicada.Title.ShouldBe("Colegiatura duplicada");
+        CodeOf(colegiaturaDuplicada).ShouldBe(ProfesionalErrorCodes.ColegiaturaDuplicada);
         (await ProfesionalTestHelpers.ListAsync(admin, Query("search", repetidaEmail))).ShouldBeEmpty();
         factory.Emails.SentTo(repetidaEmail).ShouldBeEmpty();
     }
@@ -437,7 +439,9 @@ public sealed class ProfesionalEndpointsTests(MouseDentApiFactory factory) : ICl
             [local.Id]))
         {
             otroPerfil.StatusCode.ShouldBe(HttpStatusCode.Conflict);
-            (await ReadProblemAsync(otroPerfil)).Title.ShouldBe("Correo de otra cuenta");
+            var otraCuenta = await ReadProblemAsync(otroPerfil);
+            otraCuenta.Title.ShouldBe("Correo de otra cuenta");
+            CodeOf(otraCuenta).ShouldBe(ProfesionalErrorCodes.CorreoDeOtraCuenta);
         }
 
         var email = StaffTestHelpers.UniqueEmail("alta.con.ficha");
@@ -454,7 +458,9 @@ public sealed class ProfesionalEndpointsTests(MouseDentApiFactory factory) : ICl
             [local.Id]);
 
         segunda.StatusCode.ShouldBe(HttpStatusCode.Conflict);
-        (await ReadProblemAsync(segunda)).Title.ShouldBe("Correo con ficha");
+        var conFicha = await ReadProblemAsync(segunda);
+        conFicha.Title.ShouldBe("Correo con ficha");
+        CodeOf(conFicha).ShouldBe(ProfesionalErrorCodes.CorreoConFicha);
         (await ProfesionalTestHelpers.ListAsync(admin, Query("search", email))).ShouldHaveSingleItem();
         factory.Emails.SentTo(email).ShouldHaveSingleItem();
     }
@@ -476,6 +482,7 @@ public sealed class ProfesionalEndpointsTests(MouseDentApiFactory factory) : ICl
         var problem = await ReadProblemAsync(response);
         problem.Title.ShouldBe("Invitación sin enviar");
         problem.Detail.ShouldNotBeNullOrWhiteSpace();
+        CodeOf(problem).ShouldBe(ProfesionalErrorCodes.InvitacionSinEnviar);
         var profesionalId = problem.Extensions.ShouldNotBeNull()["profesionalId"].GetGuid();
         var ficha = await ProfesionalTestHelpers.GetAsync(admin, profesionalId);
         ficha.AccountStatus.ShouldBe(StaffAccountState.Pendiente);
@@ -492,6 +499,7 @@ public sealed class ProfesionalEndpointsTests(MouseDentApiFactory factory) : ICl
             reenvioFallido.StatusCode.ShouldBe(HttpStatusCode.BadGateway);
             var problemaReenvio = await ReadProblemAsync(reenvioFallido);
             problemaReenvio.Title.ShouldBe("Invitación sin enviar");
+            CodeOf(problemaReenvio).ShouldBe(ProfesionalErrorCodes.InvitacionSinEnviar);
             problemaReenvio.Extensions.ShouldNotBeNull()["profesionalId"].GetGuid().ShouldBe(profesionalId);
         }
 
@@ -603,7 +611,9 @@ public sealed class ProfesionalEndpointsTests(MouseDentApiFactory factory) : ICl
             colegiatura.ToLowerInvariant());
 
         response.StatusCode.ShouldBe(HttpStatusCode.Conflict);
-        (await ReadProblemAsync(response)).Title.ShouldBe("Colegiatura duplicada");
+        var duplicada = await ReadProblemAsync(response);
+        duplicada.Title.ShouldBe("Colegiatura duplicada");
+        CodeOf(duplicada).ShouldBe(ProfesionalErrorCodes.ColegiaturaDuplicada);
         (await ProfesionalTestHelpers.GetAsync(admin, segunda.Id)).Colegiatura.ShouldBeNull();
     }
 
@@ -664,7 +674,9 @@ public sealed class ProfesionalEndpointsTests(MouseDentApiFactory factory) : ICl
         using var reactivada = await ProfesionalTestHelpers.SetFichaStatusAsync(admin, ficha.Id, isActive: true);
 
         reactivada.StatusCode.ShouldBe(HttpStatusCode.Conflict);
-        (await ReadProblemAsync(reactivada)).Title.ShouldBe("Activación incompleta");
+        var incompleta = await ReadProblemAsync(reactivada);
+        incompleta.Title.ShouldBe("Activación incompleta");
+        CodeOf(incompleta).ShouldBe(ProfesionalErrorCodes.ActivacionIncompleta);
         (await ProfesionalTestHelpers.GetAsync(admin, ficha.Id)).IsActive.ShouldBeFalse();
     }
 
@@ -872,7 +884,9 @@ public sealed class ProfesionalEndpointsTests(MouseDentApiFactory factory) : ICl
         using var reactivada = await ProfesionalTestHelpers.SetFichaStatusAsync(admin, ficha.Id, isActive: true);
 
         reactivada.StatusCode.ShouldBe(HttpStatusCode.Conflict);
-        (await ReadProblemAsync(reactivada)).Title.ShouldBe("Activación incompleta");
+        var incompleta = await ReadProblemAsync(reactivada);
+        incompleta.Title.ShouldBe("Activación incompleta");
+        CodeOf(incompleta).ShouldBe(ProfesionalErrorCodes.ActivacionIncompleta);
         (await ProfesionalTestHelpers.GetAsync(admin, ficha.Id)).IsActive.ShouldBeFalse();
     }
 
@@ -952,6 +966,12 @@ public sealed class ProfesionalEndpointsTests(MouseDentApiFactory factory) : ICl
         return problem;
     }
 
+    /// <summary>Código estable publicado en la extensión <c>code</c> del <c>ProblemDetails</c>.</summary>
+    private static string? CodeOf(ProblemPayload problem) =>
+        problem.Extensions is not null && problem.Extensions.TryGetValue("code", out var code)
+            ? code.GetString()
+            : null;
+
     private static async Task<Dictionary<string, string[]>> ReadValidationAsync(HttpResponseMessage response)
     {
         response.Content.Headers.ContentType?.MediaType.ShouldBe("application/problem+json");
@@ -1006,8 +1026,59 @@ public sealed class ProfesionalAltaCuentaPerdidaTests
         problem.ShouldNotBeNull();
         problem.Title.ShouldBe("Cuenta no encontrada");
         problem.Detail.ShouldNotBeNullOrWhiteSpace();
+        problem.ErrorCode.ShouldBe(ProfesionalErrorCodes.CuentaNoEncontrada);
         (await ProfesionalTestHelpers.ListAsync(admin, $"search={Uri.EscapeDataString(email)}")).ShouldBeEmpty();
         factory.Emails.SentTo(email).ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task An_alta_that_loses_the_email_race_reports_the_concurrent_alta_code()
+    {
+        using var factory = new DuplicateEmailAltaFactory();
+        using var admin = await StaffTestHelpers.SignInAsync(
+            factory,
+            MouseDentApiFactory.AdminEmail,
+            MouseDentApiFactory.AdminPassword);
+        var especialidad = await ProfesionalTestHelpers.CreateEspecialidadAsync(admin);
+        var local = await ProfesionalTestHelpers.CreateLocalAsync(admin);
+
+        using var response = await ProfesionalTestHelpers.CreateAsync(
+            admin,
+            StaffTestHelpers.UniqueEmail("alta.simultanea.codigo"),
+            [especialidad.Id],
+            [local.Id]);
+
+        response.StatusCode.ShouldBe(HttpStatusCode.Conflict);
+        response.Content.Headers.ContentType?.MediaType.ShouldBe("application/problem+json");
+        var problem = await response.Content.ReadFromJsonAsync<ProblemPayload>(Token);
+        problem.ShouldNotBeNull();
+        problem.Title.ShouldBe("Alta simultánea");
+        problem.ErrorCode.ShouldBe(ProfesionalErrorCodes.AltaSimultanea);
+    }
+
+    /// <summary>Reemplaza la escritura compuesta por el rechazo del correo tomado por otra alta.</summary>
+    private sealed class DuplicateEmailAltaFactory() : MouseDentApiFactoryBase(useFileDatabase: false)
+    {
+        protected override void ConfigureTestServices(IServiceCollection services)
+        {
+            services.RemoveAll<IAltasDeProfesionales>();
+            services.AddScoped<IAltasDeProfesionales, DuplicateEmailAltaStore>();
+        }
+    }
+
+    /// <summary>Finge que otra alta confirmó el correo entre la lectura y la escritura.</summary>
+    private sealed class DuplicateEmailAltaStore : IAltasDeProfesionales
+    {
+        public Task<ResultadoEscrituraAlta> CrearConCuentaAsync(
+            StaffAccount cuenta,
+            Profesional ficha,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(ResultadoEscrituraAlta.CorreoDuplicado);
+
+        public Task<ResultadoEscrituraAlta> VincularCuentaAsync(
+            Profesional ficha,
+            CancellationToken cancellationToken) =>
+            throw new InvalidOperationException("La prueba crea una cuenta nueva.");
     }
 
     /// <summary>Reemplaza la escritura compuesta por el rechazo de la cuenta desaparecida.</summary>
@@ -1034,5 +1105,19 @@ public sealed class ProfesionalAltaCuentaPerdidaTests
             Task.FromResult(ResultadoEscrituraAlta.CuentaNoEncontrada);
     }
 
-    private sealed record ProblemPayload(string? Title, string? Detail);
+    private sealed class ProblemPayload
+    {
+        public string? Title { get; set; }
+
+        public string? Detail { get; set; }
+
+        [JsonExtensionData]
+        public Dictionary<string, JsonElement>? Extensions { get; set; }
+
+        /// <summary>Código estable de la extensión <c>code</c>, si el error lo publica.</summary>
+        public string? ErrorCode =>
+            Extensions is not null && Extensions.TryGetValue("code", out var code)
+                ? code.GetString()
+                : null;
+    }
 }
