@@ -256,6 +256,13 @@ describe('modelo del formulario de profesionales', () => {
     expect(problemsFromFailure({ kind: 'forbidden' }).form).toContain('Tu perfil');
     expect(problemsFromFailure({ kind: 'unauthorized' }).form).toContain('sesión');
     expect(problemsFromFailure({ kind: 'unavailable' }).form).toContain('conexión');
+    expect(problemsFromFailure({ kind: 'invitation-failed' }).form).toContain('invitación');
+    expect(problemsFromFailure({ kind: 'invitation-failed' }).form).not.toContain(
+      'No pudimos guardar los cambios',
+    );
+    expect(
+      problemsFromFailure({ kind: 'invitation-failed', detail: 'El correo no salió.' }).form,
+    ).toBe('El correo no salió.');
     expect(problemsFromFailure({ kind: 'validation', errors: {} }).form).toBe(
       'Revisa los datos de la ficha.',
     );

@@ -66,7 +66,7 @@ export class ProfesionalAccountStatus {
 
   protected readonly classes = computed(() => {
     if (this.mailFailed()) {
-      return 'border border-destructive/30 bg-brand-coral-soft text-destructive';
+      return 'border border-invitation-failed-border bg-invitation-failed-soft text-invitation-failed';
     }
 
     switch (this.status()) {

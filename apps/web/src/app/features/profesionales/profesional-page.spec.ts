@@ -169,6 +169,11 @@ function text(fixture: ComponentFixture<unknown>): string {
   return host(fixture).textContent ?? '';
 }
 
+/** Panel lateral abierto: lo que ve administración por encima del velo. */
+function panel(fixture: ComponentFixture<unknown>): HTMLElement | null {
+  return host(fixture).querySelector<HTMLElement>('aside[role="dialog"]');
+}
+
 function button(
   fixture: ComponentFixture<unknown>,
   label: string,
@@ -240,6 +245,19 @@ function setChecked(fixture: ComponentFixture<unknown>, selector: string, checke
 
 function openCreate(fixture: ComponentFixture<unknown>): void {
   button(fixture, 'Nuevo profesional').click();
+}
+
+async function submitCreate(
+  fixture: ComponentFixture<unknown>,
+  name = 'Rosa Castillo',
+  email = 'rosa.castillo@example.test',
+): Promise<void> {
+  setInput(fixture, '#profesional-name', name);
+  setInput(fixture, '#profesional-email', email);
+  setChecked(fixture, 'input[name="especialidad"][value="general"]', true);
+  setChecked(fixture, 'input[name="local"][value="miraflores"]', true);
+  button(fixture, 'Crear y enviar invitación').click();
+  await flush(fixture);
 }
 
 describe('ProfesionalPage', () => {
@@ -424,6 +442,7 @@ describe('ProfesionalPage', () => {
       localIds: ['miraflores'],
     });
     expect(text(fixture)).toContain('Ficha creada. La cuenta queda pendiente');
+    expect(panel(fixture)?.textContent).toContain('Ficha creada. La cuenta queda pendiente');
     expect(text(fixture)).toContain('Ficha del profesional');
     expect(text(fixture)).toContain('Invitación pendiente');
     expect(hasButton(fixture, 'Reenviar invitación')).toBe(true);
@@ -689,7 +708,12 @@ describe('ProfesionalPage', () => {
 
     expect(api.list).toHaveBeenCalledTimes(2);
     expect(text(fixture)).toContain('No pudimos enviar la invitación');
-    expect(text(fixture)).toContain('La ficha quedó guardada, pero el correo no se pudo enviar.');
+    expect(panel(fixture)?.textContent).toContain(
+      'La ficha quedó guardada, la invitación no salió',
+    );
+    expect(panel(fixture)?.textContent).not.toContain('La operación no se completó');
+    expect(text(fixture)).not.toContain('La ficha y la cuenta del profesional quedaron guardadas');
+    expect(text(fixture).match(/La ficha y la cuenta quedaron creadas/g) ?? []).toHaveLength(1);
     expect(text(fixture)).toContain('1 correo sin enviar');
     expect(text(fixture)).not.toContain('Ficha creada.');
     expect(hasButton(fixture, 'Reintentar envío')).toBe(true);
@@ -702,10 +726,255 @@ describe('ProfesionalPage', () => {
     await flush(fixture);
 
     expect(api.resendInvitation).toHaveBeenCalledWith(guardada.id);
-    expect(text(fixture)).toContain('Invitación reenviada a rosa.castillo@example.test.');
+    expect(panel(fixture)?.textContent).toContain(
+      'Invitación reenviada a rosa.castillo@example.test.',
+    );
+    expect(panel(fixture)?.textContent).toContain(
+      'La invitación se reenvió. La cuenta seguirá pendiente hasta que la persona cree su contraseña.',
+    );
     expect(text(fixture)).not.toContain('No pudimos enviar la invitación');
     expect(text(fixture)).toContain('Invitación pendiente');
     expect(text(fixture)).not.toContain('1 correo sin enviar');
+  });
+
+  it('enfoca el primer campo inválido al enviar el alta incompleta', async () => {
+    const fixture = await render();
+
+    openCreate(fixture);
+    await flush(fixture);
+    button(fixture, 'Crear y enviar invitación').click();
+    await flush(fixture);
+
+    const name = host(fixture).querySelector<HTMLInputElement>('#profesional-name');
+    const error = host(fixture).querySelector<HTMLElement>('#profesional-name-error');
+
+    expect(document.activeElement).toBe(name);
+    expect(name?.getAttribute('aria-invalid')).toBe('true');
+    expect(error?.getAttribute('role')).toBe('alert');
+    expect(error?.textContent).toContain('Escribe el nombre completo.');
+    expect(text(fixture)).toContain('Revisa los campos marcados');
+  });
+
+  it('retira el aviso anterior cuando la acción siguiente falla', async () => {
+    const desactivada = { ...VALERIA, isActive: false };
+    const setStatus = vi.fn<ProfesionalesApi['setStatus']>();
+    setStatus.mockResolvedValueOnce({ ok: true, value: desactivada });
+    setStatus.mockResolvedValue({
+      ok: false,
+      failure: {
+        kind: 'activation-incomplete',
+        detail: 'Falta una especialidad activa.',
+      },
+    });
+    const api = profesionalesApi({
+      list: vi.fn(async () => ({ ok: true as const, value: [VALERIA] })),
+      setStatus,
+    });
+    const fixture = await render(api);
+
+    personButton(fixture, 'Valeria Torres').click();
+    await flush(fixture);
+    button(fixture, 'Desactivar ficha').click();
+    await flush(fixture);
+    button(fixture, 'Desactivar ficha', dialog(fixture)).click();
+    await flush(fixture);
+
+    expect(text(fixture)).toContain('Ficha desactivada.');
+
+    button(fixture, 'Reactivar ficha').click();
+    await flush(fixture);
+    button(fixture, 'Reactivar ficha', dialog(fixture)).click();
+    await flush(fixture);
+
+    expect(text(fixture)).toContain('La operación no se completó');
+    expect(text(fixture)).toContain('Falta una especialidad activa.');
+    expect(text(fixture)).not.toContain('Ficha desactivada.');
+  });
+
+  it('explica las asignaciones inactivas y el estado sin asignaciones activas', async () => {
+    const api = profesionalesApi({
+      list: vi.fn(async () => ({ ok: true as const, value: [LUCIA, VALERIA, CAMILA] })),
+    });
+    const fixture = await render(api);
+
+    personButton(fixture, 'Lucía Rojas').click();
+    await flush(fixture);
+
+    expect(panel(fixture)?.textContent).toContain(
+      'Sin especialidades activas. Asigna una especialidad activa antes de reactivar la ficha.',
+    );
+    expect(panel(fixture)?.textContent).toContain(
+      'Sin locales activos. Asigna uno activo antes de reactivar la ficha.',
+    );
+
+    host(fixture).querySelector<HTMLButtonElement>('button[aria-label="Cerrar ficha"]')!.click();
+    await flush(fixture);
+
+    personButton(fixture, 'Valeria Torres').click();
+    await flush(fixture);
+
+    expect(panel(fixture)?.textContent).toContain(
+      'Los locales inactivos se conservan y no permiten operar en ellos.',
+    );
+
+    host(fixture).querySelector<HTMLButtonElement>('button[aria-label="Cerrar ficha"]')!.click();
+    await flush(fixture);
+
+    personButton(fixture, 'Camila Mendoza').click();
+    await flush(fixture);
+
+    expect(panel(fixture)?.textContent).toContain(
+      'Las especialidades inactivas se conservan y no cuentan para la activación.',
+    );
+  });
+
+  it('muestra las asignaciones inactivas ya guardadas y oculta las no asignadas', async () => {
+    const api = profesionalesApi({
+      list: vi.fn(async () => ({ ok: true as const, value: [DIEGO, LUCIA] })),
+    });
+    const fixture = await render(api);
+
+    personButton(fixture, 'Diego Salazar').click();
+    await flush(fixture);
+    button(fixture, 'Editar ficha').click();
+    await flush(fixture);
+
+    expect(host(fixture).querySelector('input[name="especialidad"][value="perio"]')).toBeNull();
+    expect(host(fixture).querySelector('input[name="local"][value="surco"]')).toBeNull();
+
+    button(fixture, 'Cancelar').click();
+    await flush(fixture);
+    host(fixture).querySelector<HTMLButtonElement>('button[aria-label="Cerrar ficha"]')!.click();
+    await flush(fixture);
+
+    personButton(fixture, 'Lucía Rojas').click();
+    await flush(fixture);
+    button(fixture, 'Editar ficha').click();
+    await flush(fixture);
+
+    expect(
+      host(fixture).querySelector<HTMLInputElement>('input[name="especialidad"][value="perio"]')
+        ?.checked,
+    ).toBe(true);
+    expect(
+      host(fixture).querySelector<HTMLInputElement>('input[name="local"][value="surco"]')?.checked,
+    ).toBe(true);
+    expect(text(fixture)).toContain('Inactiva');
+    expect(text(fixture)).toContain('Inactivo');
+  });
+
+  it('conserva lo escrito cuando falla la edición', async () => {
+    const api = profesionalesApi({
+      list: vi.fn(async () => ({ ok: true as const, value: [VALERIA] })),
+      update: vi.fn(async () => ({
+        ok: false as const,
+        failure: {
+          kind: 'duplicate-colegiatura' as const,
+          detail: 'Otra ficha, incluso inactiva, ya tiene ese número de colegiatura.',
+        },
+      })),
+    });
+    const fixture = await render(api);
+
+    personButton(fixture, 'Valeria Torres').click();
+    await flush(fixture);
+    button(fixture, 'Editar ficha').click();
+    await flush(fixture);
+
+    setInput(fixture, '#profesional-colegiatura', 'COP 99999');
+    setChecked(fixture, 'input[name="especialidad"][value="orto"]', false);
+    button(fixture, 'Guardar cambios').click();
+    await flush(fixture);
+
+    expect(api.update).toHaveBeenCalledWith(VALERIA.id, {
+      colegiatura: 'COP 99999',
+      especialidadIds: ['general'],
+      localIds: ['miraflores', 'surco'],
+    });
+    expect(host(fixture).querySelector<HTMLInputElement>('#profesional-colegiatura')?.value).toBe(
+      'COP 99999',
+    );
+    expect(
+      host(fixture).querySelector<HTMLInputElement>('input[name="especialidad"][value="orto"]')
+        ?.checked,
+    ).toBe(false);
+    expect(text(fixture)).toContain(
+      'Otra ficha, incluso inactiva, ya tiene ese número de colegiatura.',
+    );
+    expect(text(fixture)).not.toContain('Cambios guardados.');
+  });
+
+  it('informa el reenvío fallido sin presentarlo como éxito', async () => {
+    const api = profesionalesApi({
+      list: vi.fn(async () => ({ ok: true as const, value: [CAMILA] })),
+      resendInvitation: vi.fn(async () => ({
+        ok: false as const,
+        failure: { kind: 'invitation-failed' as const, profesionalId: CAMILA.id },
+      })),
+    });
+    const fixture = await render(api);
+
+    personButton(fixture, 'Camila Mendoza').click();
+    await flush(fixture);
+    button(fixture, 'Reintentar envío').click();
+    await flush(fixture);
+    button(fixture, 'Enviar invitación', dialog(fixture)).click();
+    await flush(fixture);
+
+    expect(api.resendInvitation).toHaveBeenCalledWith(CAMILA.id);
+    expect(panel(fixture)?.textContent).toContain('No pudimos reenviar la invitación');
+    expect(text(fixture)).toContain('El enlace anterior ya no sirve');
+    expect(text(fixture)).not.toContain('Invitación reenviada');
+  });
+
+  it('muestra el reintento de la pantalla si no puede recargar la lista tras el alta', async () => {
+    const guardada = profesional({
+      id: 'ficha-nueva',
+      displayName: 'Rosa Castillo',
+      email: 'rosa.castillo@example.test',
+      phone: null,
+      colegiatura: null,
+      accountStatus: 'Pendiente',
+      invitationFailed: true,
+      especialidades: [{ id: 'general', name: 'Odontología general', isActive: true }],
+      locales: [{ id: 'miraflores', name: 'Miraflores', isActive: true }],
+    });
+    const list = vi
+      .fn<ProfesionalesApi['list']>()
+      .mockResolvedValueOnce({ ok: true, value: [VALERIA] })
+      .mockResolvedValueOnce({ ok: false, failure: { kind: 'unavailable' } })
+      .mockResolvedValue({ ok: true, value: [VALERIA, guardada] });
+    const api = profesionalesApi({
+      list,
+      create: vi.fn(async () => ({
+        ok: false as const,
+        failure: {
+          kind: 'invitation-failed' as const,
+          profesionalId: guardada.id,
+        },
+      })),
+    });
+    const fixture = await render(api);
+
+    openCreate(fixture);
+    await flush(fixture);
+    await submitCreate(fixture);
+
+    expect(panel(fixture)).toBeNull();
+    expect(text(fixture)).toContain('No pudimos cargar los profesionales');
+    expect(text(fixture)).toContain('La ficha quedó guardada');
+    expect(text(fixture)).toContain('no pudimos actualizar la lista');
+
+    button(fixture, 'Reintentar').click();
+    await flush(fixture);
+
+    expect(text(fixture)).toContain('Rosa Castillo');
+    expect(text(fixture)).toContain('1 correo sin enviar');
+
+    personButton(fixture, 'Rosa Castillo').click();
+    await flush(fixture);
+
+    expect(hasButton(fixture, 'Reintentar envío')).toBe(true);
   });
 
   it('desactiva la ficha solo después de confirmar y explica qué se conserva', async () => {
@@ -740,6 +1009,9 @@ describe('ProfesionalPage', () => {
 
     expect(api.setStatus).toHaveBeenCalledWith(VALERIA.id, false);
     expect(text(fixture)).toContain(
+      'Ficha desactivada. Se conservaron sus especialidades, sus locales y su cuenta.',
+    );
+    expect(panel(fixture)?.textContent).toContain(
       'Ficha desactivada. Se conservaron sus especialidades, sus locales y su cuenta.',
     );
     expect(text(fixture)).toContain('Ficha inactiva');

@@ -69,6 +69,11 @@
   --brand-mint-soft: #e4f4ef;
   --brand-peach-soft: #fff0e5;
 
+  /* Invitación que no salió: rosa de la referencia, distinto del ámbar pendiente. */
+  --invitation-failed: #9b2f4d;
+  --invitation-failed-soft: #fcecf2;
+  --invitation-failed-border: #edcfda;
+
   /* Superficies verde-grisáceas de la referencia de gestión de locales */
   --surface-green: #f4f7f2;
   --surface-green-deep: #e9efea;
@@ -134,6 +139,10 @@
   --brand-mint-soft: #294440;
   --brand-peach-soft: #46352f;
 
+  --invitation-failed: #f7bccb;
+  --invitation-failed-soft: #3d252c;
+  --invitation-failed-border: #633a47;
+
   --surface-green: #1f3330;
   --surface-green-deep: #182a28;
   --border-green: #39514b;
@@ -162,6 +171,10 @@
   --color-brand-coral-soft: var(--brand-coral-soft);
   --color-brand-mint-soft: var(--brand-mint-soft);
   --color-brand-peach-soft: var(--brand-peach-soft);
+
+  --color-invitation-failed: var(--invitation-failed);
+  --color-invitation-failed-soft: var(--invitation-failed-soft);
+  --color-invitation-failed-border: var(--invitation-failed-border);
 
   --color-surface-green: var(--surface-green);
   --color-surface-green-deep: var(--surface-green-deep);

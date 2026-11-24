@@ -278,7 +278,11 @@ function joinReasons(reasons: readonly string[]): string {
   return `${reasons.slice(0, -1).join(', ')} y ${reasons[reasons.length - 1]}`;
 }
 
-function listNames(names: readonly string[]): string {
+export function listNames(names: readonly string[]): string {
+  if (names.length === 0) {
+    return '';
+  }
+
   if (names.length === 1) {
     return names[0]!;
   }

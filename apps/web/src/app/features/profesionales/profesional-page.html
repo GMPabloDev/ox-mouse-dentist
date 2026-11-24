@@ -21,12 +21,6 @@
     }
   </div>
 
-  @if (notice(); as message) {
-    <hlm-alert class="mb-5" role="status" variant="success">
-      <p class="flex items-center gap-2 font-semibold">{{ message }}</p>
-    </hlm-alert>
-  }
-
   @switch (state()) {
     @case ('loading') {
       <div class="rounded-[14px] border border-border bg-card" role="status" aria-busy="true">
@@ -138,7 +132,7 @@
           </p>
           @if (counts().failedInvitations > 0) {
             <p
-              class="flex items-center gap-1.5 rounded-[7px] bg-brand-coral-soft px-2 py-1 text-[11px] font-extrabold text-destructive"
+              class="flex items-center gap-1.5 rounded-[7px] border border-invitation-failed-border bg-invitation-failed-soft px-2 py-1 text-[11px] font-extrabold text-invitation-failed"
               role="status"
             >
               <app-staff-icon name="alert" class="size-3.5" />
@@ -470,10 +464,12 @@
     </div>
 
     <div class="min-h-0 flex-1 overflow-y-auto">
-      @if (actionError(); as message) {
-        <div class="px-5 pt-4 sm:px-6">
-          <app-staff-notice tone="error" title="La operación no se completó">
-            {{ message }}
+      @if (outcome(); as result) {
+        <div class="px-5 pt-4 sm:px-6" [attr.role]="result.tone === 'error' ? null : 'status'">
+          <app-staff-notice [tone]="result.tone" [title]="result.title">
+            @if (result.detail) {
+              {{ result.detail }}
+            }
           </app-staff-notice>
         </div>
       }
@@ -483,7 +479,7 @@
           class="border-b px-5 py-3 sm:px-6"
           [class]="
             profesional.invitationFailed
-              ? 'border-destructive/30 bg-brand-coral-soft/70 text-destructive'
+              ? 'border-invitation-failed-border bg-invitation-failed-soft text-invitation-failed'
               : 'border-warning bg-warning/30 text-warning-foreground'
           "
         >
@@ -665,12 +661,22 @@
           <div class="mt-2.5">
             <app-profesional-chips kind="especialidad" [items]="profesional.especialidades" />
           </div>
-          @if (profesional.especialidades.length === 0) {
+          @if (activeEspecialidades(profesional) === 0) {
             <p
               class="mt-2 flex items-start gap-1.5 text-[11px] leading-snug text-warning-foreground"
             >
               <app-staff-icon name="alert" class="mt-px size-3.5" />
-              Sin especialidades asignadas. La ficha necesita al menos una activa para reactivarse.
+              Sin especialidades activas.
+              {{
+                profesional.isActive
+                  ? 'Si desactivas la ficha, no podrás reactivarla hasta asignar una activa.'
+                  : 'Asigna una especialidad activa antes de reactivar la ficha.'
+              }}
+            </p>
+          } @else if (hasInactiveEspecialidades(profesional)) {
+            <p class="mt-2 flex items-start gap-1.5 text-[11px] leading-snug text-muted-foreground">
+              <app-staff-icon name="info" class="mt-px size-3.5" />
+              Las especialidades inactivas se conservan y no cuentan para la activación.
             </p>
           }
         </section>
@@ -688,12 +694,17 @@
           <div class="mt-2.5">
             <app-profesional-chips kind="local" [items]="profesional.locales" />
           </div>
-          @if (profesional.locales.length === 0) {
+          @if (activeLocales(profesional) === 0) {
             <p
               class="mt-2 flex items-start gap-1.5 text-[11px] leading-snug text-warning-foreground"
             >
               <app-staff-icon name="alert" class="mt-px size-3.5" />
-              Sin locales de atención. La ficha necesita al menos uno activo para reactivarse.
+              Sin locales activos. Asigna uno activo antes de reactivar la ficha.
+            </p>
+          } @else if (hasInactiveLocales(profesional)) {
+            <p class="mt-2 flex items-start gap-1.5 text-[11px] leading-snug text-muted-foreground">
+              <app-staff-icon name="info" class="mt-px size-3.5" />
+              Los locales inactivos se conservan y no permiten operar en ellos.
             </p>
           }
         </section>

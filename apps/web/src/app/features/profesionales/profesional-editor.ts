@@ -2,6 +2,8 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  ElementRef,
+  inject,
   input,
   linkedSignal,
   output,
@@ -24,7 +26,7 @@ import {
   type ProfesionalProblemField,
   type ProfesionalProblems,
 } from './profesional-form';
-import { homonyms, initialsOf } from './profesional-list';
+import { homonyms, initialsOf, listNames } from './profesional-list';
 
 /**
  * Alta y edición de la ficha dentro del mismo panel lateral. El alta pide los
@@ -64,6 +66,10 @@ export class ProfesionalEditor {
 
   protected readonly draft = linkedSignal<ProfesionalDraft>(() => this.initial());
   protected readonly localProblems = signal<ProfesionalProblems>({});
+  /** Envío bloqueado por las reglas de forma: un resumen visible encabeza los errores. */
+  protected readonly blocked = signal(false);
+
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   protected readonly isNew = computed(() => this.draft().id === null);
   protected readonly dirty = computed(() => isDirty(this.draft(), this.initial()));
@@ -167,6 +173,7 @@ export class ProfesionalEditor {
   protected toggleEspecialidad(id: string, event: Event): void {
     const checked = (event.target as HTMLInputElement).checked;
 
+    this.blocked.set(false);
     this.draft.update((draft) => ({
       ...draft,
       especialidadIds: checked
@@ -180,6 +187,7 @@ export class ProfesionalEditor {
   protected toggleLocal(id: string, event: Event): void {
     const checked = (event.target as HTMLInputElement).checked;
 
+    this.blocked.set(false);
     this.draft.update((draft) => ({
       ...draft,
       localIds: checked
@@ -204,9 +212,13 @@ export class ProfesionalEditor {
       colegiatura: this.draft().colegiatura.trim(),
     };
     const problems = validateDraft(draft, this.especialidades(), this.locales());
+    const blocked = Object.keys(problems).length > 0;
 
-    if (Object.keys(problems).length > 0) {
+    this.blocked.set(blocked);
+
+    if (blocked) {
       this.localProblems.set(problems);
+      this.focusFirstProblem(problems);
       return;
     }
 
@@ -234,9 +246,52 @@ export class ProfesionalEditor {
   }
 
   private updateField(field: 'displayName' | 'email' | 'colegiatura', value: string): void {
+    this.blocked.set(false);
     this.draft.update((draft) => ({ ...draft, [field]: value }));
     this.clearProblem(field);
     this.edited.emit(field);
+  }
+
+  /**
+   * Lleva el foco al primer control con error y lo desplaza a la vista: el
+   * formulario es más alto que el panel y los errores de arriba no se ven.
+   */
+  private focusFirstProblem(problems: ProfesionalProblems): void {
+    const order: readonly ProfesionalProblemField[] = [
+      'displayName',
+      'email',
+      'colegiatura',
+      'especialidadIds',
+      'localIds',
+    ];
+    const field = order.find((candidate) => problems[candidate] !== undefined);
+
+    this.controlFor(field)?.focus({ preventScroll: false });
+  }
+
+  private controlFor(field: ProfesionalProblemField | undefined): HTMLElement | null {
+    const root = this.host.nativeElement;
+
+    switch (field) {
+      case 'displayName':
+        return root.querySelector<HTMLElement>('#profesional-name');
+      case 'email':
+        return root.querySelector<HTMLElement>('#profesional-email');
+      case 'colegiatura':
+        return root.querySelector<HTMLElement>('#profesional-colegiatura');
+      case 'especialidadIds':
+        return (
+          root.querySelector<HTMLElement>('input[name="especialidad"]:not(:disabled)') ??
+          root.querySelector<HTMLElement>('#profesional-especialidades-error')
+        );
+      case 'localIds':
+        return (
+          root.querySelector<HTMLElement>('input[name="local"]:not(:disabled)') ??
+          root.querySelector<HTMLElement>('#profesional-locales-error')
+        );
+      default:
+        return null;
+    }
   }
 
   private clearProblem(field: ProfesionalProblemField): void {
@@ -246,16 +301,4 @@ export class ProfesionalEditor {
 
     this.localProblems.update((problems) => ({ ...problems, [field]: undefined }));
   }
-}
-
-function listNames(names: readonly string[]): string {
-  if (names.length === 1) {
-    return names[0]!;
-  }
-
-  if (names.length === 2) {
-    return `${names[0]} y ${names[1]}`;
-  }
-
-  return `${names.slice(0, -1).join(', ')} y ${names[names.length - 1]}`;
 }

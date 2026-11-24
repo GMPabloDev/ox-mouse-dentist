@@ -239,6 +239,11 @@ export function problemsFromFailure(failure: ProfesionalFailure): ProfesionalPro
     case 'conflict':
       return { form: failure.detail ?? 'La operación no se completó. Vuelve a intentarlo.' };
     case 'invitation-failed':
+      return {
+        form:
+          failure.detail ??
+          'La ficha y la cuenta quedaron guardadas, pero la invitación no se pudo enviar. Reenvíala desde la ficha.',
+      };
     case 'unavailable':
       return { form: UNAVAILABLE_MESSAGE };
   }

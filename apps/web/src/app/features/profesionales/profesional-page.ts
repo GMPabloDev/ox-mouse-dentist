@@ -12,7 +12,6 @@ import type {
   LocalResponse,
   ProfesionalResponse,
 } from '@mousedent/api-client';
-import { HlmAlert } from '@mousedent/ui/alert';
 import { HlmAvatar, HlmAvatarFallback } from '@mousedent/ui/avatar';
 import { HlmButton } from '@mousedent/ui/button';
 import { HlmInput } from '@mousedent/ui/input';
@@ -59,6 +58,13 @@ import {
 
 type LoadState = 'loading' | 'ready' | 'error' | 'ended';
 
+/** Resultado de la última operación, visible dentro del panel que la ejecutó. */
+interface PanelOutcome {
+  readonly tone: 'success' | 'warn' | 'error';
+  readonly title: string;
+  readonly detail: string | null;
+}
+
 /** Ficha abierta o formulario en el mismo panel lateral. */
 type Panel =
   | { readonly kind: 'detail'; readonly id: string }
@@ -85,7 +91,6 @@ type Confirmation =
   selector: 'app-profesional-page',
   imports: [
     RouterLink,
-    HlmAlert,
     HlmAvatar,
     HlmAvatarFallback,
     HlmButton,
@@ -113,7 +118,6 @@ export class ProfesionalPage {
   protected readonly locales = signal<readonly LocalResponse[]>([]);
   protected readonly loadError = signal<string | null>(null);
   protected readonly endedReason = signal<'session' | 'profile' | null>(null);
-  protected readonly notice = signal<string | null>(null);
 
   protected readonly search = signal('');
   protected readonly especialidadFilter = signal('');
@@ -125,9 +129,11 @@ export class ProfesionalPage {
   protected readonly editorInitial = signal<ProfesionalDraft>(EMPTY_DRAFT);
   protected readonly serverProblems = signal<ProfesionalProblems>({});
   protected readonly saving = signal(false);
-  protected readonly actionError = signal<string | null>(null);
+  protected readonly outcome = signal<PanelOutcome | null>(null);
   protected readonly busyId = signal<string | null>(null);
   protected readonly confirmation = signal<Confirmation | null>(null);
+  /** Ficha a la que se le reenvió la invitación en esta sesión de la pantalla. */
+  private readonly resentId = signal<string | null>(null);
 
   private readonly editor = viewChild(ProfesionalEditor);
 
@@ -222,7 +228,7 @@ export class ProfesionalPage {
     this.state.set('loading');
     this.loadError.set(null);
     this.endedReason.set(null);
-    this.notice.set(null);
+    this.outcome.set(null);
 
     const [profesionales, especialidades, locales] = await Promise.all([
       this.api.list(),
@@ -299,8 +305,8 @@ export class ProfesionalPage {
   }
 
   protected openDetail(id: string): void {
-    this.notice.set(null);
-    this.actionError.set(null);
+    this.outcome.set(null);
+    this.resentId.set(null);
     this.serverProblems.set({});
     this.panel.set({ kind: 'detail', id });
   }
@@ -404,9 +410,24 @@ export class ProfesionalPage {
   }
 
   protected invitationCopy(profesional: ProfesionalResponse): string {
-    return profesional.invitationFailed
-      ? 'La ficha y la cuenta quedaron creadas. Reenvía la invitación para que la persona cree su contraseña.'
-      : 'La cuenta aún no tiene contraseña. La persona debe abrir el enlace del correo para crearla.';
+    if (profesional.invitationFailed) {
+      return 'La ficha y la cuenta quedaron creadas. Reenvía la invitación para que la persona cree su contraseña.';
+    }
+
+    if (this.resentId() === profesional.id) {
+      return 'La invitación se reenvió. La cuenta seguirá pendiente hasta que la persona cree su contraseña.';
+    }
+
+    return 'La cuenta aún no tiene contraseña. La persona debe abrir el enlace del correo para crearla.';
+  }
+
+  /** Una asignación conservada que hoy está inactiva se explica aunque haya otras activas. */
+  protected hasInactiveEspecialidades(profesional: ProfesionalResponse): boolean {
+    return profesional.especialidades.some((especialidad) => !especialidad.isActive);
+  }
+
+  protected hasInactiveLocales(profesional: ProfesionalResponse): boolean {
+    return profesional.locales.some((local) => !local.isActive);
   }
 
   protected initials(profesional: ProfesionalResponse): string {
@@ -436,8 +457,8 @@ export class ProfesionalPage {
   }
 
   private openEditor(draft: ProfesionalDraft, returnTo: string | null): void {
-    this.notice.set(null);
-    this.actionError.set(null);
+    this.outcome.set(null);
+    this.resentId.set(null);
     this.serverProblems.set({});
     this.editorInitial.set(draft);
     this.panel.set({ kind: 'editor', id: draft.id, returnTo });
@@ -449,13 +470,14 @@ export class ProfesionalPage {
     if (panel?.kind === 'editor' && panel.returnTo) {
       this.panel.set({ kind: 'detail', id: panel.returnTo });
       this.serverProblems.set({});
-      this.actionError.set(null);
+      this.outcome.set(null);
       return;
     }
 
     this.panel.set(null);
     this.serverProblems.set({});
-    this.actionError.set(null);
+    this.outcome.set(null);
+    this.resentId.set(null);
     this.saving.set(false);
   }
 
@@ -465,7 +487,8 @@ export class ProfesionalPage {
     this.locales.set([]);
     this.panel.set(null);
     this.confirmation.set(null);
-    this.notice.set(null);
+    this.outcome.set(null);
+    this.resentId.set(null);
     this.endedReason.set(reason);
     this.state.set('ended');
   }
@@ -473,7 +496,7 @@ export class ProfesionalPage {
   private async commitSave(draft: ProfesionalDraft): Promise<void> {
     this.saving.set(true);
     this.serverProblems.set({});
-    this.actionError.set(null);
+    this.outcome.set(null);
 
     const result = draft.id
       ? await this.api.update(draft.id, toUpdateForm(draft))
@@ -488,9 +511,8 @@ export class ProfesionalPage {
 
     this.upsert(result.value);
     this.serverProblems.set({});
-    this.actionError.set(null);
     this.panel.set({ kind: 'detail', id: result.value.id });
-    this.notice.set(saveNotice(draft, result.value));
+    this.outcome.set({ tone: 'success', title: saveNotice(draft, result.value), detail: null });
   }
 
   private async handleSaveFailure(failure: ProfesionalFailure): Promise<void> {
@@ -515,13 +537,20 @@ export class ProfesionalPage {
       if (reloaded && id && this.profesionalById(id)) {
         this.serverProblems.set({});
         this.panel.set({ kind: 'detail', id });
-        this.actionError.set(invitationFailedMessage(failure));
+        this.outcome.set({
+          tone: 'warn',
+          title: 'La ficha quedó guardada, la invitación no salió',
+          detail: null,
+        });
         return;
       }
 
-      this.serverProblems.set({
-        form: `${invitationFailedMessage(failure)} Actualiza la lista antes de volver a intentarlo.`,
-      });
+      // Sin lista no hay ficha que abrir: la pantalla muestra su error con reintento.
+      this.closePanel();
+      this.loadError.set(
+        'La ficha quedó guardada y la invitación no salió, pero no pudimos actualizar la lista. Revisa tu conexión y vuelve a intentarlo.',
+      );
+      this.state.set('error');
       return;
     }
 
@@ -534,7 +563,7 @@ export class ProfesionalPage {
 
   private async commitStatus(id: string, isActive: boolean): Promise<void> {
     this.busyId.set(id);
-    this.actionError.set(null);
+    this.outcome.set(null);
 
     const result = await this.api.setStatus(id, isActive);
 
@@ -546,16 +575,19 @@ export class ProfesionalPage {
     }
 
     this.upsert(result.value);
-    this.notice.set(
-      result.value.isActive
+    this.outcome.set({
+      tone: 'success',
+      title: result.value.isActive
         ? 'Ficha reactivada. Recuperó sus especialidades y sus locales guardados.'
         : 'Ficha desactivada. Se conservaron sus especialidades, sus locales y su cuenta.',
-    );
+      detail: null,
+    });
   }
 
   private async commitResend(id: string): Promise<void> {
     this.busyId.set(id);
-    this.actionError.set(null);
+    this.outcome.set(null);
+    this.resentId.set(null);
 
     const result = await this.api.resendInvitation(id);
 
@@ -567,11 +599,21 @@ export class ProfesionalPage {
     }
 
     this.upsert(result.value);
-    this.actionError.set(null);
-    this.notice.set(`Invitación reenviada a ${result.value.email}.`);
+    this.resentId.set(result.value.id);
+    this.outcome.set({
+      tone: 'success',
+      title: `Invitación reenviada a ${result.value.email}.`,
+      detail: null,
+    });
   }
 
   private handleActionFailure(failure: ProfesionalFailure): void {
+    const failed = (detail: string): PanelOutcome => ({
+      tone: 'error',
+      title: 'La operación no se completó',
+      detail,
+    });
+
     switch (failure.kind) {
       case 'unauthorized':
         this.end('session');
@@ -580,34 +622,47 @@ export class ProfesionalPage {
         this.end('profile');
         return;
       case 'not-found':
-        this.actionError.set('La ficha ya no existe. Actualiza la lista y vuelve a intentarlo.');
+        this.outcome.set(
+          failed('La ficha ya no existe. Actualiza la lista y vuelve a intentarlo.'),
+        );
         void this.reload();
         return;
       case 'invitation-failed':
-        this.actionError.set(invitationFailedMessage(failure));
+        this.outcome.set({
+          tone: 'error',
+          title: 'No pudimos reenviar la invitación',
+          detail:
+            'El enlace anterior ya no sirve. Revisa la configuración del correo y vuelve a intentarlo.',
+        });
         void this.reload();
         return;
       case 'validation': {
         const first = Object.values(failure.errors)[0]?.[0];
-        this.actionError.set(first ?? 'Revisa los datos de la ficha y vuelve a intentarlo.');
+        this.outcome.set(failed(first ?? 'Revisa los datos de la ficha y vuelve a intentarlo.'));
         return;
       }
       case 'activation-incomplete':
-        this.actionError.set(
-          failure.detail ??
-            'La ficha necesita al menos una especialidad activa y un local de atención activo.',
+        this.outcome.set(
+          failed(
+            failure.detail ??
+              'La ficha necesita al menos una especialidad activa y un local de atención activo.',
+          ),
         );
         return;
       case 'conflict':
-        this.actionError.set(failure.detail ?? 'La operación no se completó. Vuelve a intentarlo.');
+        this.outcome.set(
+          failed(failure.detail ?? 'La operación no se completó. Vuelve a intentarlo.'),
+        );
         return;
       case 'unavailable':
-        this.actionError.set(
-          'La operación no se completó. Revisa tu conexión y vuelve a intentarlo.',
+        this.outcome.set(
+          failed('La operación no se completó. Revisa tu conexión y vuelve a intentarlo.'),
         );
         return;
       default:
-        this.actionError.set(failure.detail ?? 'La operación no se completó. Vuelve a intentarlo.');
+        this.outcome.set(
+          failed(failure.detail ?? 'La operación no se completó. Vuelve a intentarlo.'),
+        );
     }
   }
 
@@ -676,10 +731,4 @@ function saveNotice(draft: ProfesionalDraft, saved: ProfesionalResponse): string
     default:
       return 'Ficha creada. La cuenta queda pendiente hasta que la persona establezca su contraseña con la invitación.';
   }
-}
-
-function invitationFailedMessage(failure: ProfesionalFailure): string {
-  return failure.kind === 'invitation-failed' && failure.detail
-    ? failure.detail
-    : 'La ficha y la cuenta quedaron guardadas, pero el correo no se pudo enviar. Puedes reenviar la invitación desde esta ficha.';
 }

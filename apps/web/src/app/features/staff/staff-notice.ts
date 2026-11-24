@@ -1,17 +1,18 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
-import { StaffIcon } from './staff-icon';
+import { StaffIcon, type StaffIconName } from './staff-icon';
 
-export type StaffNoticeTone = 'neutral' | 'warn' | 'error';
+export type StaffNoticeTone = 'neutral' | 'warn' | 'error' | 'success';
 
 const TONES: Readonly<Record<StaffNoticeTone, string>> = {
   neutral: 'border-border bg-muted/60 text-foreground',
   warn: 'border-warning bg-warning/40 text-warning-foreground',
   error: 'border-destructive/40 bg-destructive/10 text-destructive',
+  success: 'border-success/30 bg-success/10 text-success',
 };
 
 /**
  * Aviso dentro del detalle y del formulario. `error` se anuncia como alerta; los
- * avisos informativos acompañan al contenido sin interrumpir.
+ * avisos informativos y las confirmaciones acompañan al contenido sin interrumpir.
  */
 @Component({
   selector: 'app-staff-notice',
@@ -23,7 +24,7 @@ const TONES: Readonly<Record<StaffNoticeTone, string>> = {
       [class]="classes()"
       [attr.role]="tone() === 'error' ? 'alert' : null"
     >
-      <app-staff-icon [name]="tone() === 'neutral' ? 'info' : 'alert'" class="mt-0.5 size-[18px]" />
+      <app-staff-icon [name]="icon()" class="mt-0.5 size-[18px]" />
       <div class="min-w-0">
         <strong class="block text-[13px]">{{ title() }}</strong>
         <div class="mt-0.5 text-[13px]"><ng-content /></div>
@@ -36,4 +37,14 @@ export class StaffNotice {
   readonly title = input.required<string>();
 
   protected readonly classes = computed(() => TONES[this.tone()]);
+  protected readonly icon = computed<StaffIconName>(() => {
+    switch (this.tone()) {
+      case 'neutral':
+        return 'info';
+      case 'success':
+        return 'check';
+      default:
+        return 'alert';
+    }
+  });
 }

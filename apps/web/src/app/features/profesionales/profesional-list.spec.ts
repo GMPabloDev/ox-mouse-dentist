@@ -12,6 +12,7 @@ import {
   hasFilters,
   homonyms,
   initialsOf,
+  listNames,
   resultsLabel,
   type ProfesionalFilters,
 } from './profesional-list';
@@ -214,6 +215,13 @@ describe('lista de profesionales', () => {
     expect(homonyms('Diego Salazar', ['Diego Salazar Ríos'])).toEqual(['Diego Salazar Ríos']);
     expect(homonyms('Valeria', ['Valeria Torres'])).toEqual([]);
     expect(homonyms('Ana Pérez', ['Camila Mendoza'])).toEqual([]);
+  });
+
+  it('enumera nombres con comas y una conjunción final, sin fallar si la lista está vacía', () => {
+    expect(listNames([])).toBe('');
+    expect(listNames(['Miraflores'])).toBe('Miraflores');
+    expect(listNames(['Miraflores', 'Surco'])).toBe('Miraflores y Surco');
+    expect(listNames(['Miraflores', 'Surco', 'La Molina'])).toBe('Miraflores, Surco y La Molina');
   });
 
   it('usa las etiquetas visibles de la ficha', () => {

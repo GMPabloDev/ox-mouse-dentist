@@ -29,6 +29,14 @@
 
 <form class="flex min-h-0 flex-1 flex-col" (submit)="submit($event)" novalidate>
   <div class="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-6">
+    @if (blocked()) {
+      <div class="mb-5">
+        <app-staff-notice tone="error" title="Revisa los campos marcados">
+          Tus datos siguen aquí. Corrige lo indicado en cada campo antes de guardar.
+        </app-staff-notice>
+      </div>
+    }
+
     @if (fieldProblem('form'); as message) {
       <div class="mb-5">
         <app-staff-notice tone="error" title="No pudimos guardar los cambios">
@@ -66,7 +74,7 @@
               (input)="onNameInput($event)"
             />
             @if (fieldProblem('displayName'); as message) {
-              <p id="profesional-name-error" class="mt-2 text-[13px] text-destructive">
+              <p id="profesional-name-error" class="mt-2 text-[13px] text-destructive" role="alert">
                 {{ message }}
               </p>
             }
@@ -98,7 +106,11 @@
               (input)="onEmailInput($event)"
             />
             @if (fieldProblem('email'); as message) {
-              <p id="profesional-email-error" class="mt-2 text-[13px] text-destructive">
+              <p
+                id="profesional-email-error"
+                class="mt-2 text-[13px] text-destructive"
+                role="alert"
+              >
                 {{ message }}
               </p>
             }
@@ -128,7 +140,11 @@
               las fichas, incluidas las inactivas.
             </p>
             @if (fieldProblem('colegiatura'); as message) {
-              <p id="profesional-colegiatura-error" class="mt-2 text-[13px] text-destructive">
+              <p
+                id="profesional-colegiatura-error"
+                class="mt-2 text-[13px] text-destructive"
+                role="alert"
+              >
                 {{ message }}
               </p>
             }
@@ -197,7 +213,11 @@
               ignora mayúsculas y espacios.
             </p>
             @if (fieldProblem('colegiatura'); as message) {
-              <p id="profesional-colegiatura-error" class="mt-2 text-[13px] text-destructive">
+              <p
+                id="profesional-colegiatura-error"
+                class="mt-2 text-[13px] text-destructive"
+                role="alert"
+              >
                 {{ message }}
               </p>
             }
@@ -260,11 +280,16 @@
         </div>
 
         @if (fieldProblem('especialidadIds'); as message) {
-          <p id="profesional-especialidades-error" class="mt-2 text-[13px] text-destructive">
+          <p
+            id="profesional-especialidades-error"
+            class="mt-2 text-[13px] text-destructive"
+            role="alert"
+            tabindex="-1"
+          >
             {{ message }}
           </p>
         } @else {
-          <p id="profesional-especialidades-error" class="sr-only"></p>
+          <p id="profesional-especialidades-error" class="sr-only" tabindex="-1"></p>
         }
       </fieldset>
 
@@ -322,11 +347,16 @@
         </div>
 
         @if (fieldProblem('localIds'); as message) {
-          <p id="profesional-locales-error" class="mt-2 text-[13px] text-destructive">
+          <p
+            id="profesional-locales-error"
+            class="mt-2 text-[13px] text-destructive"
+            role="alert"
+            tabindex="-1"
+          >
             {{ message }}
           </p>
         } @else {
-          <p id="profesional-locales-error" class="sr-only"></p>
+          <p id="profesional-locales-error" class="sr-only" tabindex="-1"></p>
         }
       </fieldset>
 
